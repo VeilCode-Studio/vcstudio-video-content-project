@@ -112,3 +112,5 @@ Deletion is a single atomic PostgreSQL statement scoped to the authenticated wor
 A non-identifying security audit event records the permanent removal using the existing disconnection audit category, with no account ID, name, username, notes, post content or per-account metrics. Meta research authorization, publishing connections, other watchlist accounts and the original external platform account are independent and remain available. No R2 files are stored for research, so there are no associated binary assets to clean up. No migration or scheduled cleanup is needed.
 
 Deletion verification: 128 unit/integration tests and all 19 mocked browser journeys passed, plus two final Light/Dark confirmation checks. Coverage includes workspace/role/version guards, rollback, all refresh states, late completion, re-adding with empty history, cancellation, progress and recoverable errors. No production research account was deleted for verification.
+
+Deletion release `e7d2ad6` is live through Vercel `dpl_FLsXVXuPZ2sa1JevRLfFyWLJQta2`, READY on the canonical domain. No migration, environment change or worker deployment accompanied this release.
