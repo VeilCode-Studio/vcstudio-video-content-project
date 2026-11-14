@@ -22,3 +22,8 @@ export async function disconnectResearchAction() {
   sessionStorage.setItem("research-disconnected", "true");
   return { ok: true };
 }
+export async function refreshResearchSourcesAction() {
+  sessionStorage.setItem("research-sources-checked", "true");
+  await new Promise((resolve) => setTimeout(resolve, 500));
+  return { ok: true, sourceCount: 1 };
+}

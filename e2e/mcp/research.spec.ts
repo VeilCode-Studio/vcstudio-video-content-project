@@ -1,5 +1,28 @@
 import { expect, test } from "@playwright/test";
 
+test("owners can rediscover source accounts without another OAuth flow", async ({
+  page,
+}) => {
+  await page.goto("/research.html");
+  await page.getByRole("button", { name: "Find Instagram sources" }).click();
+  await expect(
+    page.getByRole("button", { name: "Checking sources…" }),
+  ).toBeDisabled();
+  await expect(
+    page.getByRole("status").getByText(/Found 1 Instagram source account/),
+  ).toBeVisible();
+  expect(
+    await page.evaluate(() =>
+      sessionStorage.getItem("research-sources-checked"),
+    ),
+  ).toBe("true");
+  await expect(page).toHaveURL(/research.html$/);
+  await page.goto("/research.html?readonly=1");
+  await expect(
+    page.getByRole("button", { name: "Find Instagram sources" }),
+  ).toHaveCount(0);
+});
+
 for (const theme of ["light", "dark"]) {
   test(`authorization failure has a visible recovery alert in ${theme}`, async ({
     page,

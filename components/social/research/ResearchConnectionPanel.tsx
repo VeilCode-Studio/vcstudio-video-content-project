@@ -2,7 +2,12 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { KeyRoundIcon, Loader2Icon, ShieldCheckIcon } from "lucide-react";
+import {
+  KeyRoundIcon,
+  Loader2Icon,
+  ShieldCheckIcon,
+  RefreshCwIcon,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -14,7 +19,11 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { disconnectResearchAction } from "@/app/(authenticated)/app/social/research/actions";
+import {
+  disconnectResearchAction,
+  refreshResearchSourcesAction,
+} from "@/app/(authenticated)/app/social/research/actions";
+import { Alert } from "@/components/ui/Alert";
 import type { ResearchConnectionView } from "@studio/contracts/social-research";
 import { researchDate } from "@/lib/social/research/view";
 
@@ -31,6 +40,11 @@ export function ResearchConnectionPanel({
   const [pending, start] = useTransition();
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [checkingSources, setCheckingSources] = useState(false);
+  const [sourceFeedback, setSourceFeedback] = useState<{
+    error: boolean;
+    message: string;
+  } | null>(null);
   return (
     <section className="app-panel app-section rounded-2xl border bg-card">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -64,12 +78,63 @@ export function ResearchConnectionPanel({
       {connection.connected && connection.sources.length === 0 ? (
         <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-sm">
           No Instagram research source was returned. Connect a professional
-          Instagram account to a Facebook Page you manage, grant the research
-          permissions and reconnect. Your direct Instagram publishing connection
-          is separate.
+          Instagram account to a Facebook Page you manage and check source
+          discovery below. Only reconnect if the required account consent or
+          permissions need changing. Your publishing connection is separate.
         </p>
       ) : null}
+      {sourceFeedback ? (
+        <Alert
+          variant={sourceFeedback.error ? "destructive" : "default"}
+          role={sourceFeedback.error ? "alert" : "status"}
+        >
+          <p className="col-start-2">{sourceFeedback.message}</p>
+        </Alert>
+      ) : null}
       <div className="flex flex-wrap gap-2">
+        {canManage && enabled && connection.connected ? (
+          <Button
+            variant="outline"
+            disabled={pending}
+            onClick={() => {
+              setCheckingSources(true);
+              setSourceFeedback(null);
+              start(async () => {
+                try {
+                  const result = await refreshResearchSourcesAction();
+                  if (!result.ok) {
+                    setSourceFeedback({ error: true, message: result.error });
+                    return;
+                  }
+                  const count = result.sourceCount ?? 0;
+                  setSourceFeedback({
+                    error: count === 0,
+                    message:
+                      count > 0
+                        ? `Found ${count} Instagram source account${count === 1 ? "" : "s"}. Choose a source below to run research.`
+                        : "Meta returned no usable Instagram source. Check the professional-account Page links and Meta account selection.",
+                  });
+                  router.refresh();
+                } catch {
+                  setSourceFeedback({
+                    error: true,
+                    message:
+                      "Source discovery could not finish. Your saved research access is preserved; try again.",
+                  });
+                } finally {
+                  setCheckingSources(false);
+                }
+              });
+            }}
+          >
+            {checkingSources ? (
+              <Loader2Icon className="animate-spin" />
+            ) : (
+              <RefreshCwIcon />
+            )}
+            {checkingSources ? "Checking sources…" : "Find Instagram sources"}
+          </Button>
+        ) : null}
         {canManage && enabled ? (
           <Button
             nativeButton={false}

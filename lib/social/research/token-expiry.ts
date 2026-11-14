@@ -1,16 +1,9 @@
 import "server-only";
-import { z } from "zod";
-import { metaResearchRequest } from "./meta-client";
+import {
+  readResearchTokenMetadata,
+  type ResearchTokenMetadata,
+} from "./token-metadata";
 import { SocialResearchError } from "./errors";
-
-const metadataSchema = z.object({
-  data: z.object({
-    app_id: z.string().min(1),
-    is_valid: z.boolean(),
-    expires_at: z.number().int().nonnegative(),
-    data_access_expires_at: z.number().int().nonnegative().optional(),
-  }),
-});
 
 /** Local reconnect ceiling, not a claim that Meta guarantees a 60-day token. */
 const MAX_RESEARCH_CONSENT_AGE_MS = 60 * 24 * 60 * 60 * 1000;
@@ -21,6 +14,7 @@ export async function resolveResearchTokenDeadline(input: {
   appId: string;
   appSecret: string;
   version: string;
+  inspectToken?: () => Promise<ResearchTokenMetadata>;
 }): Promise<Date> {
   const now = Date.now();
   const localDeadline = now + MAX_RESEARCH_CONSENT_AGE_MS;
@@ -33,14 +27,9 @@ export async function resolveResearchTokenDeadline(input: {
   }
   // Some valid token-exchange responses omit expires_in. Inspect the returned
   // token rather than guessing its provider expiry or persisting unknown access.
-  const { data } = metadataSchema.parse(
-    await metaResearchRequest({
-      version: input.version,
-      path: "debug_token",
-      token: `${input.appId}|${input.appSecret}`,
-      query: { input_token: input.token },
-    }),
-  );
+  const data = await (input.inspectToken
+    ? input.inspectToken()
+    : readResearchTokenMetadata(input));
   if (!data.is_valid || data.app_id !== input.appId) {
     throw new SocialResearchError(
       "access",

@@ -117,6 +117,29 @@ export async function disconnectResearchConnection(workspaceId: string) {
     })
     .where(eq(connections.workspaceId, workspaceId));
 }
+export async function replaceResearchSources(input: {
+  workspaceId: string;
+  revision: number;
+  sources: ResearchSource[];
+}) {
+  const [row] = await getDatabase()
+    .update(connections)
+    .set({
+      sources: input.sources,
+      revision: sql`${connections.revision}+1`,
+      updatedAt: new Date(),
+    })
+    .where(
+      and(
+        eq(connections.workspaceId, input.workspaceId),
+        eq(connections.revision, input.revision),
+        isNull(connections.revokedAt),
+        sql`${connections.accessTokenSealed} is not null and ${connections.expiresAt}>now()`,
+      ),
+    )
+    .returning({ workspaceId: connections.workspaceId });
+  return Boolean(row);
+}
 export async function addResearchAccount(input: {
   workspaceId: string;
   createdByUserId: string;

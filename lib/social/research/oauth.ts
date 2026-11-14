@@ -6,6 +6,11 @@ import { SocialResearchError } from "./errors";
 import { ResearchAuthorizationError } from "./authorization-error";
 import type { ResearchAuthorizationFailure } from "@studio/contracts/social-research";
 import { resolveResearchTokenDeadline } from "./token-expiry";
+import {
+  readResearchTokenMetadata,
+  type ResearchTokenMetadata,
+} from "./token-metadata";
+import { discoverResearchSources } from "./source-discovery";
 
 export const RESEARCH_OAUTH_COOKIE = "vcstudio_research_oauth";
 export const RESEARCH_OAUTH_PATH = "/api/social/research";
@@ -53,26 +58,6 @@ const permissionsSchema = z.object({
     .array(z.object({ permission: z.string(), status: z.string() }))
     .max(100),
 });
-const pagesSchema = z.object({
-  data: z
-    .array(
-      z.object({
-        instagram_business_account: z
-          .object({
-            id: z.string().regex(/^\d{1,40}$/),
-            username: z.string().optional(),
-          })
-          .nullish(),
-      }),
-    )
-    .max(25),
-  paging: z
-    .object({
-      cursors: z.object({ after: z.string().max(1000).optional() }).optional(),
-      next: z.string().optional(),
-    })
-    .optional(),
-});
 
 export async function exchangeResearchConsent(input: {
   code: string;
@@ -109,9 +94,18 @@ export async function exchangeResearchConsent(input: {
         },
       }),
     );
+    let metadata: Promise<ResearchTokenMetadata> | undefined;
+    const inspectToken = () =>
+      (metadata ??= readResearchTokenMetadata({
+        token: token.access_token,
+        appId: input.appId,
+        appSecret: input.appSecret,
+        version: input.version,
+      }));
     const expiresAt = await resolveResearchTokenDeadline({
       token: token.access_token,
       expiresIn: token.expires_in,
+      inspectToken,
       appId: input.appId,
       appSecret: input.appSecret,
       version: input.version,
@@ -137,43 +131,22 @@ export async function exchangeResearchConsent(input: {
         "Meta research permissions were not granted.",
       );
     stage = "account_discovery";
-    const sources = new Map<string, { id: string; username: string }>();
-    // Discovery is explicitly bounded; reconnect after narrowing Meta's Page selection if more than 50 apply.
-    if (
-      scopes.includes("instagram_basic") &&
-      scopes.includes("pages_show_list")
-    ) {
-      let after: string | undefined;
-      for (let index = 0; index < 2; index++) {
-        const result = pagesSchema.parse(
-          await metaResearchRequest({
-            version: input.version,
-            path: "me/accounts",
+    const sources =
+      scopes.includes("instagram_basic") && scopes.includes("pages_show_list")
+        ? await discoverResearchSources({
             token: token.access_token,
-            query: {
-              fields: "instagram_business_account{id,username}",
-              limit: "25",
-              ...(after ? { after } : {}),
-            },
-          }),
-        );
-        for (const page of result.data) {
-          const account = page.instagram_business_account;
-          if (account)
-            sources.set(account.id, {
-              id: account.id,
-              username: account.username ?? account.id,
-            });
-        }
-        after = result.paging?.cursors?.after;
-        if (!result.paging?.next || !after) break;
-      }
-    }
+            appId: input.appId,
+            appSecret: input.appSecret,
+            version: input.version,
+            inspectToken,
+          })
+        : [];
+
     return {
       token: token.access_token,
       expiresAt,
       scopes,
-      sources: researchSourcesSchema.parse([...sources.values()]),
+      sources: researchSourcesSchema.parse(sources),
     };
   } catch (error) {
     throw new ResearchAuthorizationError(stage, error);

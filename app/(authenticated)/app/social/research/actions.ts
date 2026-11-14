@@ -14,9 +14,11 @@ import { isSocialResearchEnabled } from "@/lib/social/research/environment";
 import { refreshResearchAccount } from "@/lib/social/research/refresh";
 import { SocialResearchError } from "@/lib/social/research/errors";
 import { recordAuditEvent } from "@/lib/audit/record-audit-event";
+import { refreshResearchSources } from "@/lib/social/research/source-refresh";
 
 export type ResearchActionResult =
-  { ok: true; id?: string } | { ok: false; error: string };
+  | { ok: true; id?: string; sourceCount?: number }
+  | { ok: false; error: string };
 async function context(ownerOnly = false) {
   if (!isSocialResearchEnabled())
     throw new SocialResearchError(
@@ -127,6 +129,29 @@ export async function disconnectResearchAction(): Promise<ResearchActionResult> 
     });
     revalidatePath("/app/social/research");
     return { ok: true };
+  } catch (error) {
+    return failure(error);
+  }
+}
+export async function refreshResearchSourcesAction(): Promise<ResearchActionResult> {
+  try {
+    const auth = await context(true);
+    const sourceCount = await refreshResearchSources(
+      auth.activeMembership.workspaceId,
+    );
+    await recordAuditEvent({
+      workspaceId: auth.activeMembership.workspaceId,
+      actorUserId: auth.user.id,
+      action: "platform_connected",
+      targetType: "social_research_connection",
+      metadata: {
+        purpose: "research",
+        event: "sources_refreshed",
+        sourceCount,
+      },
+    });
+    revalidatePath("/app/social/research");
+    return { ok: true, sourceCount };
   } catch (error) {
     return failure(error);
   }

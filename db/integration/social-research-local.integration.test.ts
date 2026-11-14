@@ -19,6 +19,7 @@ import {
   getResearchConnection,
   listResearchSnapshots,
   saveResearchConnection,
+  replaceResearchSources,
 } from "@/db/repositories/social-research.repository";
 import { researchConnectionView } from "@/lib/social/research/view";
 import {
@@ -257,6 +258,38 @@ describe("isolated PostgreSQL research storage", () => {
     expect(restored?.id).toBe(row.id);
     expect(restored?.version).toBe(row.version + 2);
   });
+  it("source repair is tenant/revision guarded and preserves credential and scopes", async () => {
+    const before = await getResearchConnection(workspaceId);
+    expect(before).not.toBeNull();
+    const sources = [{ id: "42", username: "verified" }];
+    expect(
+      await replaceResearchSources({
+        workspaceId: otherWorkspace,
+        revision: before!.revision,
+        sources,
+      }),
+    ).toBe(false);
+    expect(
+      await replaceResearchSources({
+        workspaceId,
+        revision: before!.revision + 1,
+        sources,
+      }),
+    ).toBe(false);
+    expect(
+      await replaceResearchSources({
+        workspaceId,
+        revision: before!.revision,
+        sources,
+      }),
+    ).toBe(true);
+    const after = await getResearchConnection(workspaceId);
+    expect(after?.sources).toEqual(sources);
+    expect(after?.revision).toBe(before!.revision + 1);
+    expect(after?.accessTokenSealed).toBe(before!.accessTokenSealed);
+    expect(after?.scopes).toEqual(before!.scopes);
+    expect(after?.expiresAt).toEqual(before!.expiresAt);
+  });
   it("disconnect blocks late results and future claims, while preserving prior snapshots", async () => {
     const row = await account("129");
     const operation = await claim(row.id);
@@ -283,5 +316,12 @@ describe("isolated PostgreSQL research storage", () => {
     expect(
       (await getResearchConnection(workspaceId))?.accessTokenSealed,
     ).toBeNull();
+    expect(
+      await replaceResearchSources({
+        workspaceId,
+        revision: (await getResearchConnection(workspaceId))!.revision,
+        sources: [{ id: "42", username: "stale" }],
+      }),
+    ).toBe(false);
   });
 });

@@ -195,6 +195,45 @@ describe("bounded official Meta research", () => {
   });
 });
 describe("read-only research OAuth", () => {
+  it("reuses expiry inspection while recovering the consented source omitted from Page listing", async () => {
+    fetchMock
+      .mockResolvedValueOnce(json({ access_token: "short" }))
+      .mockResolvedValueOnce(json({ access_token: "long" }))
+      .mockResolvedValueOnce(
+        json({
+          data: {
+            app_id: "app",
+            is_valid: true,
+            expires_at: 0,
+            granular_scopes: [{ scope: "instagram_basic", target_ids: ["42"] }],
+          },
+        }),
+      )
+      .mockResolvedValueOnce(
+        json({
+          data: RESEARCH_SCOPES.map((permission) => ({
+            permission,
+            status: "granted",
+          })),
+        }),
+      )
+      .mockResolvedValueOnce(json({ data: [{}] }))
+      .mockResolvedValueOnce(json({ id: "42", username: "veilcodestudio" }));
+    const result = await exchangeResearchConsent({
+      code: "code",
+      appId: "app",
+      appSecret: "secret",
+      version: "v25.0",
+      baseUrl: "https://studio.test",
+    });
+    expect(result.sources).toEqual([{ id: "42", username: "veilcodestudio" }]);
+    expect(
+      fetchMock.mock.calls.filter(([url]) =>
+        new URL(String(url)).pathname.endsWith("/debug_token"),
+      ),
+    ).toHaveLength(1);
+    expect(fetchMock).toHaveBeenCalledTimes(6);
+  });
   it.each([undefined, null, 0, "0", "3600"])(
     "accepts a verified token when expires_in is %s",
     async (expiresIn) => {
@@ -356,6 +395,15 @@ describe("read-only research OAuth", () => {
             { instagram_business_account: { id: "44", username: "third" } },
           ],
         }),
+      )
+      .mockResolvedValueOnce(
+        json({
+          data: {
+            app_id: "app",
+            is_valid: true,
+            expires_at: Math.floor(Date.now() / 1000) + 3600,
+          },
+        }),
       );
     const result = await exchangeResearchConsent({
       code: "code",
@@ -370,7 +418,7 @@ describe("read-only research OAuth", () => {
       { id: "44", username: "third" },
     ]);
     expect(result.token).toBe("long");
-    expect(fetchMock).toHaveBeenCalledTimes(5);
+    expect(fetchMock).toHaveBeenCalledTimes(6);
     expect(String(fetchMock.mock.calls[4]?.[0])).toContain(
       "graph.facebook.com/v25.0/me/accounts",
     );
