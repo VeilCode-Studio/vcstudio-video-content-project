@@ -195,6 +195,48 @@ describe("bounded official Meta research", () => {
   });
 });
 describe("read-only research OAuth", () => {
+  it.each([undefined, null, 0, "0", "3600"])(
+    "accepts a verified token when expires_in is %s",
+    async (expiresIn) => {
+      const expiry = Math.floor(Date.now() / 1000) + 1800;
+      fetchMock
+        .mockResolvedValueOnce(json({ access_token: "short" }))
+        .mockResolvedValueOnce(
+          json({
+            access_token: "long",
+            ...(expiresIn !== undefined ? { expires_in: expiresIn } : {}),
+          }),
+        );
+      if (!expiresIn || expiresIn === "0")
+        fetchMock.mockResolvedValueOnce(
+          json({ data: { app_id: "app", is_valid: true, expires_at: expiry } }),
+        );
+      fetchMock.mockResolvedValueOnce(
+        json({
+          data: [{ permission: "pages_read_engagement", status: "granted" }],
+        }),
+      );
+      const result = await exchangeResearchConsent({
+        code: "code",
+        appId: "app",
+        appSecret: "secret",
+        version: "v25.0",
+        baseUrl: "https://studio.test",
+      });
+      expect(result.token).toBe("long");
+      if (!expiresIn || expiresIn === "0") {
+        expect(result.expiresAt.getTime()).toBe(expiry * 1000);
+        const [url, options] = fetchMock.mock.calls[2]!;
+        expect(new URL(String(url)).pathname).toBe("/v25.0/debug_token");
+        expect(options?.headers).toEqual({
+          Authorization: "Bearer app|secret",
+        });
+      }
+      expect(fetchMock).toHaveBeenCalledTimes(
+        expiresIn && expiresIn !== "0" ? 3 : 4,
+      );
+    },
+  );
   it.each([
     "token_exchange",
     "token_extension",
@@ -253,7 +295,9 @@ describe("read-only research OAuth", () => {
   it("identifies token schema fields without keeping received secret values", async () => {
     fetchMock
       .mockResolvedValueOnce(json({ access_token: "private-short" }))
-      .mockResolvedValueOnce(json({ access_token: "private-long" }));
+      .mockResolvedValueOnce(
+        json({ access_token: "private-long", expires_in: "invalid" }),
+      );
     await expect(
       exchangeResearchConsent({
         code: "code",

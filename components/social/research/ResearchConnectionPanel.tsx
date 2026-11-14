@@ -56,7 +56,7 @@ export function ResearchConnectionPanel({
       </p>
       {connection.connected && connection.expiresAt ? (
         <p className="text-xs text-muted-foreground">
-          Authorization expires {researchDate(connection.expiresAt)}.{" "}
+          Renew research access by {researchDate(connection.expiresAt)}.{" "}
           {connection.sources.length} professional Instagram source
           {connection.sources.length === 1 ? "" : "s"} discovered (up to 50).
         </p>

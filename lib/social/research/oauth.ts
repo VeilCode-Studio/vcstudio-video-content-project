@@ -5,6 +5,7 @@ import { metaResearchRequest } from "./meta-client";
 import { SocialResearchError } from "./errors";
 import { ResearchAuthorizationError } from "./authorization-error";
 import type { ResearchAuthorizationFailure } from "@studio/contracts/social-research";
+import { resolveResearchTokenDeadline } from "./token-expiry";
 
 export const RESEARCH_OAUTH_COOKIE = "vcstudio_research_oauth";
 export const RESEARCH_OAUTH_PATH = "/api/social/research";
@@ -37,7 +38,15 @@ export function createResearchAuthorizationUrl(input: {
 
 const tokenSchema = z.object({
   access_token: z.string().min(1),
-  expires_in: z.number().int().positive(),
+  expires_in: z
+    .union([
+      z.number().int().nonnegative(),
+      z
+        .string()
+        .regex(/^\d{1,10}$/)
+        .transform(Number),
+    ])
+    .nullish(),
 });
 const permissionsSchema = z.object({
   data: z
@@ -100,6 +109,13 @@ export async function exchangeResearchConsent(input: {
         },
       }),
     );
+    const expiresAt = await resolveResearchTokenDeadline({
+      token: token.access_token,
+      expiresIn: token.expires_in,
+      appId: input.appId,
+      appSecret: input.appSecret,
+      version: input.version,
+    });
     stage = "permissions";
     const permissions = permissionsSchema.parse(
       await metaResearchRequest({
@@ -155,7 +171,7 @@ export async function exchangeResearchConsent(input: {
     }
     return {
       token: token.access_token,
-      expiresAt: new Date(Date.now() + token.expires_in * 1000),
+      expiresAt,
       scopes,
       sources: researchSourcesSchema.parse([...sources.values()]),
     };
