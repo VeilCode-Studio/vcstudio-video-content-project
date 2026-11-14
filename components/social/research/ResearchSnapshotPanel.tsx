@@ -1,34 +1,119 @@
+"use client";
+import { useState, useTransition } from "react";
 import type { ResearchSnapshotView } from "@studio/contracts/social-research";
 import { BarChart3Icon, ExternalLinkIcon, LightbulbIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { ResearchPostCard } from "./ResearchPostCard";
 import { analyzeResearchSnapshots } from "@/lib/social/research/analysis";
 import { researchDate } from "@/lib/social/research/view";
+import { Button } from "@/components/ui/button";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { Alert } from "@/components/ui/Alert";
+import { Loader2Icon, ImagesIcon, UserRoundIcon } from "lucide-react";
+import { loadResearchPreviewsAction } from "@/app/(authenticated)/app/social/research/actions";
+import type { ResearchPreviews } from "@studio/contracts/social-research-previews";
 
 export function ResearchSnapshotPanel({
   snapshot,
   previous,
+  canLoadPreviews = false,
 }: {
   snapshot: ResearchSnapshotView;
   previous?: ResearchSnapshotView;
+  canLoadPreviews?: boolean;
 }) {
+  const [previews, setPreviews] = useState<ResearchPreviews | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [pending, start] = useTransition();
   const analysis = analyzeResearchSnapshots(snapshot, previous);
   const data = snapshot.data;
   return (
     <div className="app-section min-w-0">
       <section className="app-panel app-section rounded-2xl border bg-card">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="app-heading">
-            <h3 className="text-lg font-semibold">{data.name}</h3>
-            <p className="text-xs text-muted-foreground">
-              Observed {researchDate(snapshot.capturedAt)}
-            </p>
+          <div className="flex min-w-0 items-center gap-3">
+            <Avatar className="size-14 shrink-0">
+              {previews?.profileImageUrl ? (
+                <AvatarImage
+                  src={previews.profileImageUrl}
+                  alt={`${data.name} profile photo`}
+                  referrerPolicy="no-referrer"
+                />
+              ) : null}
+              <AvatarFallback>
+                <UserRoundIcon aria-hidden="true" />
+              </AvatarFallback>
+            </Avatar>
+            <div className="app-heading min-w-0">
+              <h3 className="break-words text-lg font-semibold">{data.name}</h3>
+              <p className="text-xs text-muted-foreground">
+                Observed {researchDate(snapshot.capturedAt)}
+              </p>
+            </div>
           </div>
           <Badge variant="secondary">Saved Meta snapshot</Badge>
         </div>
         {data.biography ? (
           <p className="break-words text-sm text-muted-foreground">
             {data.biography}
+          </p>
+        ) : (
+          <p className="text-sm text-muted-foreground">
+            Meta did not expose an account bio in this observation.
+          </p>
+        )}
+        <div className="flex flex-wrap items-center gap-3">
+          <Button
+            variant="outline"
+            disabled={!canLoadPreviews || pending}
+            aria-busy={pending}
+            onClick={() => {
+              setError(null);
+              start(async () => {
+                try {
+                  const result = await loadResearchPreviewsAction({
+                    snapshotId: snapshot.id,
+                  });
+                  if (result.ok) setPreviews(result.data);
+                  else setError(result.error);
+                } catch {
+                  setError(
+                    "Previews could not load. Try again or open the original post; your saved research is unchanged.",
+                  );
+                }
+              });
+            }}
+          >
+            {pending ? (
+              <Loader2Icon className="animate-spin" aria-hidden="true" />
+            ) : (
+              <ImagesIcon aria-hidden="true" />
+            )}
+            {pending
+              ? "Loading previews…"
+              : previews
+                ? "Reload media previews"
+                : "Load media previews"}
+          </Button>
+          <p className="text-xs text-muted-foreground">
+            {canLoadPreviews
+              ? "Loads profile photo and post media directly from Meta. No media copies are stored. Videos load only when requested."
+              : "An owner/editor with active Meta research access can load previews."}
+          </p>
+        </div>
+        {error ? (
+          <Alert variant="destructive">
+            <p className="col-start-2">{error}</p>
+          </Alert>
+        ) : null}
+        {previews ? (
+          <p role="status" className="text-xs text-muted-foreground">
+            Previews fetched {researchDate(previews.fetchedAt)}. Links can
+            expire; reload them if needed. Saved metrics and bio remain from
+            this observation.
+            {!previews.profileImageUrl
+              ? " Profile photo was not available from Meta."
+              : ""}
           </p>
         ) : null}
         <dl className="grid grid-cols-2 gap-4 lg:grid-cols-4">
@@ -177,6 +262,7 @@ export function ResearchSnapshotPanel({
                 post={post}
                 index={index}
                 facebook={data.platform === "facebook"}
+                previews={previews}
               />
             ))}
           </div>

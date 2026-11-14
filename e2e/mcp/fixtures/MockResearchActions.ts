@@ -38,3 +38,49 @@ export async function deleteResearchAccountAction(input: unknown) {
       }
     : { ok: true };
 }
+
+export async function loadResearchPreviewsAction(input: unknown) {
+  sessionStorage.setItem("research-preview-request", JSON.stringify(input));
+  await new Promise((resolve) => setTimeout(resolve, 400));
+  if (new URLSearchParams(location.search).has("previewFail"))
+    return {
+      ok: false,
+      error:
+        "Meta could not expose previews. Your saved research is unchanged.",
+    };
+  const base = "https://scontent.xx.fbcdn.net/";
+  return {
+    ok: true,
+    data: {
+      fetchedAt: "2026-11-14T12:00:00.000Z",
+      profileImageUrl: base + "profile.jpg",
+      posts: [
+        {
+          postId: "1",
+          items: [
+            {
+              kind: "video",
+              url: base + "clip.mp4",
+              posterUrl: base + "cover.jpg",
+            },
+          ],
+          hasMore: false,
+        },
+        {
+          postId: "2",
+          items: [{ kind: "image", url: base + "image.jpg", posterUrl: null }],
+          hasMore: false,
+        },
+        {
+          postId: "3",
+          items: [
+            { kind: "image", url: base + "slide-one.jpg", posterUrl: null },
+            { kind: "image", url: base + "slide-two.jpg", posterUrl: null },
+            { kind: "video", url: null, posterUrl: base + "cover.jpg" },
+          ],
+          hasMore: false,
+        },
+      ],
+    },
+  };
+}

@@ -17,7 +17,11 @@ function origin(value: string | undefined): string | null {
 
 export function buildContentSecurityPolicy(
   environment: SecurityHeaderEnvironment,
+  pathname = "",
 ): string {
+  const researchMediaOrigins = /^\/app\/social\/research\/?$/.test(pathname)
+    ? "https://*.fbcdn.net https://*.cdninstagram.com https://*.fbsbx.com"
+    : "";
   const r2Origin = origin(environment.r2Endpoint);
   const developmentScript =
     environment.nodeEnvironment === "development" ? " 'unsafe-eval'" : "";
@@ -39,8 +43,8 @@ export function buildContentSecurityPolicy(
     "default-src 'self'",
     `script-src 'self' 'unsafe-inline'${developmentScript} https://*.clerk.accounts.dev https://*.clerk.com`,
     "style-src 'self' 'unsafe-inline'",
-    `img-src 'self' data: blob: ${assetOrigins}`.trim(),
-    `media-src 'self' blob: ${r2Origin ?? ""}`.trim(),
+    `img-src 'self' data: blob: ${assetOrigins} ${researchMediaOrigins}`.trim(),
+    `media-src 'self' blob: ${r2Origin ?? ""} ${researchMediaOrigins}`.trim(),
     `connect-src 'self' blob: ${connectOrigins}`.trim(),
     "font-src 'self' data:",
     "worker-src 'self' blob:",
@@ -64,8 +68,11 @@ export function buildSecurityHeaders(input: {
       ? "Content-Security-Policy"
       : "Content-Security-Policy-Report-Only"]: buildContentSecurityPolicy(
       input.environment,
+      input.pathname,
     ),
-    "Referrer-Policy": "strict-origin-when-cross-origin",
+    "Referrer-Policy": /^\/app\/social\/research\/?$/.test(input.pathname)
+      ? "no-referrer"
+      : "strict-origin-when-cross-origin",
     "Permissions-Policy": `camera=(), microphone=${AUDIO_ROUTE.test(input.pathname) ? "(self)" : "()"}, geolocation=(), payment=(), usb=()`,
     "X-Content-Type-Options": "nosniff",
     "X-Frame-Options": "DENY",

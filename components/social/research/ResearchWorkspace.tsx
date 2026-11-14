@@ -418,8 +418,14 @@ export function ResearchWorkspace(props: ResearchWorkspaceProps) {
                     </FormSelect>
                   </div>
                   <ResearchSnapshotPanel
+                    key={snapshot.id}
                     snapshot={snapshot}
                     previous={props.snapshots[observationIndex + 1]}
+                    canLoadPreviews={
+                      props.enabled &&
+                      props.canResearch &&
+                      props.connection.connected
+                    }
                   />
                   <div className="flex flex-wrap gap-4 text-sm">
                     {props.historyPage > 0 ? (

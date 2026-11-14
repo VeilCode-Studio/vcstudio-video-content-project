@@ -19,6 +19,37 @@ import { refreshResearchAccount } from "@/lib/social/research/refresh";
 import { SocialResearchError } from "@/lib/social/research/errors";
 import { recordAuditEvent } from "@/lib/audit/record-audit-event";
 import { refreshResearchSources } from "@/lib/social/research/source-refresh";
+import { loadResearchPreviews } from "@/lib/social/research/previews";
+import {
+  researchPreviewInputSchema,
+  type ResearchPreviewResult,
+} from "@studio/contracts/social-research-previews";
+
+export async function loadResearchPreviewsAction(
+  input: unknown,
+): Promise<ResearchPreviewResult> {
+  const parsed = researchPreviewInputSchema.safeParse(input);
+  if (!parsed.success)
+    return { ok: false, error: "Choose a valid saved observation first." };
+  try {
+    const auth = await context();
+    return {
+      ok: true,
+      data: await loadResearchPreviews(
+        auth.activeMembership.workspaceId,
+        parsed.data,
+      ),
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      error:
+        error instanceof SocialResearchError
+          ? error.message
+          : "Previews could not load. Your saved research is unchanged; try again or open the original post.",
+    };
+  }
+}
 
 export type ResearchActionResult =
   | { ok: true; id?: string; sourceCount?: number }

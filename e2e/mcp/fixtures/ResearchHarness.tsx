@@ -92,6 +92,17 @@ export function ResearchHarness() {
       ? "33333333-3333-4333-8333-333333333333"
       : null,
   };
+  if (query.has("media"))
+    props.snapshots[0]!.data.posts.push({
+      id: "3",
+      url: "https://www.instagram.com/p/carousel/",
+      publishedAt: null,
+      text: "A useful carousel",
+      format: "carousel",
+      likes: 50,
+      comments: 4,
+      shares: null,
+    });
   props.selected = props.accounts[0]!;
   return <ResearchWorkspace {...props} />;
 }

@@ -8,6 +8,27 @@ const production = {
 } as const;
 
 describe("security headers", () => {
+  it("allows Meta images/videos only on research and preserves framing/script protections", () => {
+    const research = buildSecurityHeaders({
+      pathname: "/app/social/research",
+      environment: { ...production, cspMode: "enforce" },
+    });
+    const policy = research["Content-Security-Policy"];
+    expect(policy).toContain("https://*.cdninstagram.com");
+    expect(policy).toContain("https://*.fbcdn.net");
+    expect(policy).toContain("frame-ancestors 'none'");
+    expect(
+      policy?.split(";").find((part) => part.includes("script-src")),
+    ).not.toContain("fbcdn");
+    expect(research["Referrer-Policy"]).toBe("no-referrer");
+    expect(research["X-Frame-Options"]).toBe("DENY");
+    expect(
+      buildSecurityHeaders({
+        pathname: "/app/social/posts",
+        environment: production,
+      })["Content-Security-Policy-Report-Only"],
+    ).not.toContain("fbcdn");
+  });
   it("starts CSP in report-only mode and allows the configured R2 origin", () => {
     const headers = buildSecurityHeaders({
       pathname: "/",

@@ -11,6 +11,7 @@ const mocks = vi.hoisted(() => ({
   audit: vi.fn(),
   sources: vi.fn(),
   remove: vi.fn(),
+  previews: vi.fn(),
 }));
 vi.mock("@/lib/auth/workspace-context", () => ({
   getAuthenticatedWorkspaceContext: mocks.context,
@@ -30,6 +31,9 @@ vi.mock("@/lib/social/research/refresh", () => ({
 vi.mock("@/lib/social/research/source-refresh", () => ({
   refreshResearchSources: mocks.sources,
 }));
+vi.mock("@/lib/social/research/previews", () => ({
+  loadResearchPreviews: mocks.previews,
+}));
 vi.mock("next/cache", () => ({ revalidatePath: mocks.invalidate }));
 vi.mock("@/lib/audit/record-audit-event", () => ({
   recordAuditEvent: mocks.audit,
@@ -41,6 +45,7 @@ import {
   refreshResearchAccountAction,
   refreshResearchSourcesAction,
   deleteResearchAccountAction,
+  loadResearchPreviewsAction,
 } from "@/app/(authenticated)/app/social/research/actions";
 const workspaceId = "11111111-1111-4111-8111-111111111111";
 const accountId = "22222222-2222-4222-8222-222222222222";
@@ -230,5 +235,52 @@ describe("research server-action authorization", () => {
     ).toBe(false);
     expect(mocks.add).not.toHaveBeenCalled();
     expect(mocks.archive).not.toHaveBeenCalled();
+  });
+});
+
+describe("transient research preview authorization", () => {
+  it.each(["owner", "editor"] as const)(
+    "allows %s reads in authenticated workspace only",
+    async (role) => {
+      mocks.context.mockResolvedValue(auth(role));
+      mocks.previews.mockResolvedValue({ posts: [] });
+      expect(
+        await loadResearchPreviewsAction({
+          snapshotId: accountId,
+          workspaceId: "forged",
+        }),
+      ).toEqual({ ok: true, data: { posts: [] } });
+      expect(mocks.previews).toHaveBeenCalledWith(workspaceId, {
+        snapshotId: accountId,
+      });
+      expect(mocks.invalidate).not.toHaveBeenCalled();
+      expect(mocks.audit).not.toHaveBeenCalled();
+    },
+  );
+  it("denies viewers, disabled deployments, unsigned users and invalid input", async () => {
+    mocks.context.mockResolvedValue(auth("viewer"));
+    expect(
+      (await loadResearchPreviewsAction({ snapshotId: accountId })).ok,
+    ).toBe(false);
+    mocks.context.mockResolvedValue(null);
+    expect(
+      (await loadResearchPreviewsAction({ snapshotId: accountId })).ok,
+    ).toBe(false);
+    mocks.enabled.mockReturnValue(false);
+    expect(
+      (await loadResearchPreviewsAction({ snapshotId: accountId })).ok,
+    ).toBe(false);
+    expect(
+      (await loadResearchPreviewsAction({ snapshotId: "invalid" })).ok,
+    ).toBe(false);
+    expect(mocks.previews).not.toHaveBeenCalled();
+  });
+  it("does not leak raw provider errors or media URLs", async () => {
+    mocks.previews.mockRejectedValue(
+      new Error("secret=https://cdninstagram.com/signed"),
+    );
+    const result = await loadResearchPreviewsAction({ snapshotId: accountId });
+    expect(result).toMatchObject({ ok: false });
+    expect(JSON.stringify(result)).not.toContain("secret");
   });
 });

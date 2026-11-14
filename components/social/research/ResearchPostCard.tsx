@@ -2,15 +2,19 @@ import type { ResearchPost } from "@studio/contracts/social-research";
 import { ExternalLinkIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { researchDate } from "@/lib/social/research/view";
+import type { ResearchPreviews } from "@studio/contracts/social-research-previews";
+import { ResearchPostMedia } from "./ResearchPostMedia";
 
 export function ResearchPostCard({
   post,
   index,
   facebook,
+  previews,
 }: {
   post: ResearchPost;
   index: number;
   facebook: boolean;
+  previews?: ResearchPreviews | null;
 }) {
   return (
     <article className="app-panel flex min-w-0 flex-col gap-4 rounded-xl border bg-card">
@@ -22,6 +26,13 @@ export function ResearchPostCard({
             : "Publication time unavailable"}
         </span>
       </div>
+      {previews && post.format !== "text" ? (
+        <ResearchPostMedia
+          key={previews.fetchedAt}
+          preview={previews.posts.find((preview) => preview.postId === post.id)}
+          label={`Post ${index + 1}`}
+        />
+      ) : null}
       <p className="line-clamp-6 whitespace-pre-wrap break-words text-sm">
         {post.text || "No caption was exposed by Meta."}
       </p>

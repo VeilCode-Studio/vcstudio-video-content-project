@@ -326,3 +326,120 @@ test("disabled deployment explains setup and prevents research actions", async (
     page.getByRole("link", { name: "Reconnect Meta research" }),
   ).toHaveCount(0);
 });
+
+for (const theme of ["light", "dark"]) {
+  test(`research media previews are transient, responsive and user-controlled in ${theme}`, async ({
+    page,
+  }, testInfo) => {
+    await page.setViewportSize({ width: 390, height: 900 });
+    const requested: string[] = [];
+    await page.route("https://*.fbcdn.net/**", async (route) => {
+      requested.push(route.request().url());
+      await route.fulfill({
+        contentType: "image/svg+xml",
+        body: '<svg xmlns="http://www.w3.org/2000/svg" width="600" height="800"><rect width="600" height="800" fill="#d3eadb"/><text x="40" y="400" font-size="32">Research preview</text></svg>',
+      });
+    });
+    await page.goto(`/research.html?media=1&theme=${theme}`);
+    expect(requested).toHaveLength(0);
+    await expect(
+      page.getByText("Useful work, shared consistently."),
+    ).toBeVisible();
+    await page
+      .getByRole("button", { name: "Load media previews", exact: true })
+      .click();
+    await expect(
+      page.getByRole("button", { name: /Loading previews/ }),
+    ).toBeDisabled();
+    await expect(
+      page.getByRole("button", { name: "Reload media previews" }),
+    ).toBeEnabled();
+    await expect(
+      page.getByRole("img", { name: "Example studio profile photo" }),
+    ).toBeVisible();
+    expect(requested.some((url) => url.endsWith(".mp4"))).toBe(false);
+    expect(requested.some((url) => url.endsWith("slide-two.jpg"))).toBe(false);
+    const carousel = page.getByRole("region", { name: "Post 3 media" });
+    await carousel.scrollIntoViewIfNeeded();
+    await expect(
+      carousel.getByRole("img", { name: "Post 3, slide 1", exact: true }),
+    ).toBeVisible();
+    await expect(
+      carousel.getByRole("button", { name: "Previous media" }),
+    ).toBeDisabled();
+    await carousel.getByRole("button", { name: "Next media" }).click();
+    await expect(
+      carousel.getByRole("img", { name: "Post 3, slide 2", exact: true }),
+    ).toBeVisible();
+    await carousel.getByRole("button", { name: "Next media" }).click();
+    await expect(
+      carousel.getByText("Meta did not provide a playable video.", {
+        exact: false,
+      }),
+    ).toBeVisible();
+    await expect(
+      carousel.getByRole("button", { name: "Next media" }),
+    ).toBeDisabled();
+    await page.getByRole("button", { name: "Load video", exact: true }).click();
+    const video = page.locator("video");
+    await expect(video).toHaveAttribute("preload", "none");
+    await expect(video).toHaveAttribute("src", /clip.mp4$/);
+    expect(requested.some((url) => url.endsWith(".mp4"))).toBe(false);
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= window.innerWidth,
+      ),
+    ).toBe(true);
+    expect(
+      await page.evaluate(() =>
+        Object.keys(localStorage).filter((key) => /preview/i.test(key)),
+      ),
+    ).toEqual([]);
+    await page.screenshot({
+      path: testInfo.outputPath(`research-previews-${theme}.png`),
+      fullPage: true,
+    });
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= window.innerWidth,
+      ),
+    ).toBe(true);
+  });
+}
+test("preview failure preserves observations and retries; broken links have recovery", async ({
+  page,
+}) => {
+  await page.goto("/research.html?previewFail=1");
+  await page
+    .getByRole("button", { name: "Load media previews", exact: true })
+    .click();
+  await expect(page.getByRole("alert")).toContainText(
+    "Your saved research is unchanged",
+  );
+  await expect(
+    page.getByRole("button", { name: "Load media previews", exact: true }),
+  ).toBeEnabled();
+  await expect(
+    page.getByRole("heading", { name: "Format comparison" }),
+  ).toBeVisible();
+  await page.route("https://*.fbcdn.net/**", (route) =>
+    route.fulfill({ status: 403, body: "expired" }),
+  );
+  await page.goto("/research.html");
+  await page
+    .getByRole("button", { name: "Load media previews", exact: true })
+    .click();
+  const image = page.getByRole("article").nth(1);
+  await image.scrollIntoViewIfNeeded();
+  await expect(
+    image.getByText("Image unavailable or link expired.", { exact: false }),
+  ).toBeVisible();
+  await expect(
+    image.getByRole("link", { name: "Open source post 2" }),
+  ).toHaveAttribute("href", /instagram.com/);
+  await page.goto("/research.html?readonly=1");
+  await expect(
+    page.getByRole("button", { name: "Load media previews", exact: true }),
+  ).toBeDisabled();
+});
