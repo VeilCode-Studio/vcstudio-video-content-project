@@ -7,6 +7,7 @@ import {
   Megaphone,
   PenLine,
   Plug,
+  Binoculars,
 } from "lucide-react";
 import { SidebarLink } from "@/components/application/SidebarLink";
 import { usePathname } from "next/navigation";
@@ -38,6 +39,7 @@ const SOCIAL_ROUTES = [
   { href: "/app/social/posts", label: "Posts", icon: PenLine },
   { href: "/app/social/calendar", label: "Schedule", icon: CalendarDays },
   { href: "/app/social/library", label: "Media library", icon: Images },
+  { href: "/app/social/research", label: "Account research", icon: Binoculars },
   {
     href: WORKSPACE_CONNECTIONS_PATH,
     label: "Accounts & connections",

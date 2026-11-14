@@ -18,6 +18,10 @@ const keysByFile = new Map(
 );
 
 const rules = {
+  ENABLE_SOCIAL_RESEARCH: {
+    required: [".env.example"],
+    forbidden: [".env.trigger"],
+  },
   ...Object.fromEntries(
     [
       "ENABLE_ELEVENLABS",

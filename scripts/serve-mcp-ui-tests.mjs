@@ -20,6 +20,7 @@ const applicationCss = (
   )
 ).css;
 for (const [name, entry] of [
+  ["research", "e2e/mcp/fixtures/research-entry.tsx"],
   ["harness", "e2e/mcp/fixtures/entry.tsx"],
   ["elevenlabs-voice", "e2e/mcp/fixtures/elevenlabs-voice-entry.tsx"],
   ["host", "e2e/mcp/fixtures/host.ts"],
@@ -50,6 +51,16 @@ for (const [name, entry] of [
     target: "es2022",
     define: { "process.env.NODE_ENV": '"production"' },
     alias: {
+      ...(name === "research"
+        ? {
+            "next/navigation": path.resolve(
+              "e2e/mcp/fixtures/MockResearchNavigation.ts",
+            ),
+            "@/app/(authenticated)/app/social/research/actions": path.resolve(
+              "e2e/mcp/fixtures/MockResearchActions.ts",
+            ),
+          }
+        : {}),
       ...(name === "project-form-alignment"
         ? {
             "next/navigation": path.resolve(
@@ -164,7 +175,7 @@ for (const [name, entry] of [
   });
   await writeFile(
     path.join(out, `${name}.html`),
-    `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>${name === "post-composer" || name === "tiktok-connect" || name === "project-creation" || name === "project-form-alignment" || name === "facebook-selection" || name === "video-media" || name === "media-upload" || name === "media-library" || name === "elevenlabs-voice" ? applicationCss : css}</style><style>body{margin:0;padding:16px;min-width:0}</style></head><body><div id="root"></div><script type="module">${bundle.outputFiles[0].text.replace(/<\/script/gi, "<\\/script")}</script></body></html>`,
+    `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>${name === "research" || name === "post-composer" || name === "tiktok-connect" || name === "project-creation" || name === "project-form-alignment" || name === "facebook-selection" || name === "video-media" || name === "media-upload" || name === "media-library" || name === "elevenlabs-voice" ? applicationCss : css}</style><style>body{margin:0;padding:16px;min-width:0}</style></head><body><div id="root"></div><script type="module">${bundle.outputFiles[0].text.replace(/<\/script/gi, "<\\/script")}</script></body></html>`,
   );
 }
 const server = createServer(async (req, res) => {
@@ -195,6 +206,7 @@ const server = createServer(async (req, res) => {
     return;
   }
   const allowed = {
+    "/research.html": path.join(out, "research.html"),
     "/host.html": path.join(out, "host.html"),
     "/upload-host.html": path.join(out, "upload-host.html"),
     "/upload.html": path.resolve("public/mcp/upload.html"),

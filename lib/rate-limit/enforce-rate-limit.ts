@@ -10,6 +10,7 @@ import {
 } from "@/lib/rate-limit/rate-limit";
 
 export type RateLimitedOperation =
+  | "social_research"
   | "media_inspection"
   | "media_thumbnail"
   | "video_generation"

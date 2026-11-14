@@ -1,4 +1,9 @@
 import { sql } from "drizzle-orm";
+import type {
+  ResearchSnapshot,
+  ResearchSource,
+  ResearchPlatform,
+} from "@studio/contracts/social-research";
 import type { SocialYouTubeSettings } from "@studio/contracts/publishing";
 import type { SceneAnalysisSegmentHint } from "@studio/prompts";
 import type {
@@ -8967,3 +8972,135 @@ export type ProductionRun = typeof productionRuns.$inferSelect;
 export type ProductionRunEvent = typeof productionRunEvents.$inferSelect;
 export type ProductionRunGateResult =
   typeof productionRunGateResults.$inferSelect;
+
+// Read-only Meta research consent is independent of publication credentials.
+export const socialResearchConnections = pgTable(
+  "social_research_connections",
+  {
+    workspaceId: uuid("workspace_id")
+      .primaryKey()
+      .references(() => workspaces.id, { onDelete: "cascade" }),
+    accessTokenSealed: text("access_token_sealed"),
+    expiresAt: timestamp("expires_at", { withTimezone: true }),
+    scopes: jsonb("scopes").$type<string[]>().notNull().default([]),
+    sources: jsonb("sources").$type<ResearchSource[]>().notNull().default([]),
+    connectedByUserId: uuid("connected_by_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    revokedAt: timestamp("revoked_at", { withTimezone: true }),
+    revision: integer("revision").notNull().default(1),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => [check("social_research_connection_revision", sql`${t.revision} > 0`)],
+);
+
+export const socialResearchAccounts = pgTable(
+  "social_research_accounts",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    workspaceId: uuid("workspace_id")
+      .notNull()
+      .references(() => workspaces.id, { onDelete: "cascade" }),
+    platform: text("platform").$type<ResearchPlatform>().notNull(),
+    identifier: text("identifier").notNull(),
+    name: text("name").notNull(),
+    notes: text("notes").notNull().default(""),
+    version: integer("version").notNull().default(1),
+    lastRequestedAt: timestamp("last_requested_at", { withTimezone: true }),
+    refreshedAt: timestamp("refreshed_at", { withTimezone: true }),
+    refreshLeaseUntil: timestamp("refresh_lease_until", { withTimezone: true }),
+    lastError: text("last_error"),
+    archivedAt: timestamp("archived_at", { withTimezone: true }),
+    createdByUserId: uuid("created_by_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => [
+    uniqueIndex("social_research_account_tenant_unique").on(
+      t.id,
+      t.workspaceId,
+    ),
+    uniqueIndex("social_research_account_identity_unique").on(
+      t.workspaceId,
+      t.platform,
+      t.identifier,
+    ),
+    index("social_research_account_workspace_active_index").on(
+      t.workspaceId,
+      t.archivedAt,
+      t.createdAt,
+    ),
+    check(
+      "social_research_account_platform",
+      sql`${t.platform} in ('facebook','instagram')`,
+    ),
+    check(
+      "social_research_account_identifier",
+      sql`(${t.platform}='facebook' and ${t.identifier} ~ '^[0-9]{1,40}$') or (${t.platform}='instagram' and ${t.identifier} ~ '^[a-z0-9_][a-z0-9_.]{0,29}$')`,
+    ),
+    check("social_research_account_version", sql`${t.version} > 0`),
+  ],
+);
+
+export const socialResearchSnapshots = pgTable(
+  "social_research_snapshots",
+  {
+    id: uuid("id").primaryKey(),
+    workspaceId: uuid("workspace_id")
+      .notNull()
+      .references(() => workspaces.id, { onDelete: "cascade" }),
+    accountId: uuid("account_id").notNull(),
+    sourceId: text("source_id"),
+    status: text("status")
+      .$type<"running" | "succeeded" | "failed">()
+      .notNull(),
+    connectionRevision: integer("connection_revision").notNull(),
+    data: jsonb("data").$type<ResearchSnapshot>(),
+    safeError: text("safe_error"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    completedAt: timestamp("completed_at", { withTimezone: true }),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => [
+    foreignKey({
+      columns: [t.accountId, t.workspaceId],
+      foreignColumns: [
+        socialResearchAccounts.id,
+        socialResearchAccounts.workspaceId,
+      ],
+      name: "social_research_snapshot_tenant_account_fk",
+    }),
+    index("social_research_snapshot_account_created_index").on(
+      t.workspaceId,
+      t.accountId,
+      t.createdAt,
+    ),
+    check(
+      "social_research_snapshot_status",
+      sql`${t.status} in ('running','succeeded','failed')`,
+    ),
+    check(
+      "social_research_snapshot_result",
+      sql`(${t.status}='succeeded') = (${t.data} is not null)`,
+    ),
+    check(
+      "social_research_snapshot_completion",
+      sql`(${t.status}='running') = (${t.completedAt} is null)`,
+    ),
+  ],
+);

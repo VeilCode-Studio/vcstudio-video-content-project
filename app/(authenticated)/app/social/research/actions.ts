@@ -1,0 +1,133 @@
+"use server";
+
+import { z } from "zod";
+import { revalidatePath } from "next/cache";
+import { researchAccountInputSchema } from "@studio/contracts/social-research";
+import {
+  addResearchAccount,
+  archiveResearchAccount,
+  disconnectResearchConnection,
+} from "@/db/repositories/social-research.repository";
+import { getAuthenticatedWorkspaceContext } from "@/lib/auth/workspace-context";
+import { requireCapability } from "@/lib/policies/workspace-policy";
+import { isSocialResearchEnabled } from "@/lib/social/research/environment";
+import { refreshResearchAccount } from "@/lib/social/research/refresh";
+import { SocialResearchError } from "@/lib/social/research/errors";
+import { recordAuditEvent } from "@/lib/audit/record-audit-event";
+
+export type ResearchActionResult =
+  { ok: true; id?: string } | { ok: false; error: string };
+async function context(ownerOnly = false) {
+  if (!isSocialResearchEnabled())
+    throw new SocialResearchError(
+      "configuration",
+      "Social research is disabled for this deployment.",
+    );
+  const result = await getAuthenticatedWorkspaceContext();
+  if (!result)
+    throw new SocialResearchError(
+      "access",
+      "Sign in and select your workspace first.",
+    );
+  requireCapability(
+    result.activeMembership.role,
+    ownerOnly ? "manageSettings" : "researchSocialAccounts",
+  );
+  return result;
+}
+function failure(error: unknown): ResearchActionResult {
+  if (error instanceof SocialResearchError)
+    return { ok: false, error: error.message };
+  console.error("SOCIAL_RESEARCH_ACTION_FAILED");
+  return {
+    ok: false,
+    error:
+      "This action could not finish. Check your workspace permissions and try again.",
+  };
+}
+export async function addResearchAccountAction(
+  input: unknown,
+): Promise<ResearchActionResult> {
+  const parsed = researchAccountInputSchema.safeParse(input);
+  if (!parsed.success)
+    return {
+      ok: false,
+      error: parsed.error.issues[0]?.message ?? "Check the account details.",
+    };
+  try {
+    const auth = await context();
+    const row = await addResearchAccount({
+      ...parsed.data,
+      workspaceId: auth.activeMembership.workspaceId,
+      createdByUserId: auth.user.id,
+    });
+    if (!row)
+      return {
+        ok: false,
+        error: "This account is already saved in this workspace.",
+      };
+    revalidatePath("/app/social/research");
+    return { ok: true, id: row.id };
+  } catch (error) {
+    return failure(error);
+  }
+}
+export async function refreshResearchAccountAction(
+  input: unknown,
+): Promise<ResearchActionResult> {
+  try {
+    const auth = await context();
+    const id = await refreshResearchAccount(
+      auth.activeMembership.workspaceId,
+      input,
+    );
+    revalidatePath("/app/social/research");
+    return { ok: true, id };
+  } catch (error) {
+    return failure(error);
+  }
+}
+export async function archiveResearchAccountAction(
+  input: unknown,
+): Promise<ResearchActionResult> {
+  const parsed = z
+    .object({ accountId: z.uuid(), version: z.number().int().positive() })
+    .safeParse(input);
+  if (!parsed.success)
+    return { ok: false, error: "That account selection is invalid." };
+  try {
+    const auth = await context();
+    if (
+      !(await archiveResearchAccount({
+        ...parsed.data,
+        workspaceId: auth.activeMembership.workspaceId,
+      }))
+    )
+      return {
+        ok: false,
+        error:
+          "The account changed or is refreshing. Refresh this page and try again.",
+      };
+    revalidatePath("/app/social/research");
+    return { ok: true };
+  } catch (error) {
+    return failure(error);
+  }
+}
+export async function disconnectResearchAction(): Promise<ResearchActionResult> {
+  try {
+    const auth = await context(true);
+    await disconnectResearchConnection(auth.activeMembership.workspaceId);
+    await recordAuditEvent({
+      workspaceId: auth.activeMembership.workspaceId,
+      actorUserId: auth.user.id,
+      action: "platform_disconnected",
+      targetType: "social_research_connection",
+      metadata: { purpose: "research" },
+    });
+    revalidatePath("/app/social/research");
+    return { ok: true };
+  } catch (error) {
+    return failure(error);
+  }
+}

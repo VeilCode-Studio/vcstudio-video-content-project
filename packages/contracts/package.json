@@ -10,7 +10,8 @@
     "./mcp-upload": "./src/mcp-upload.ts",
     "./mcp-generation": "./src/mcp-generation.ts",
     "./scene-media": "./src/scene-media.ts",
-    "./voice-preset": "./src/voice-preset.ts"
+    "./voice-preset": "./src/voice-preset.ts",
+    "./social-research": "./src/social-research.ts"
   },
   "dependencies": {
     "zod": "4.6.6"
