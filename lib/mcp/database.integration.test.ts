@@ -95,6 +95,18 @@ beforeAll(async () => {
       .filter((statement) => statement.includes('"mcp_workspace_grants"'))
       .join("\n"),
   );
+
+  await pg.exec(
+    (
+      await readFile(
+        "migrations/20261114215623_mcp_research_analysis/migration.sql",
+        "utf8",
+      )
+    )
+      .split("--> statement-breakpoint")
+      .filter((statement) => statement.includes('"mcp_workspace_grants"'))
+      .join("\n"),
+  );
   shared.database = Object.assign(db, {
     batch: (queries: { toSQL(): { sql: string; params: unknown[] } }[]) =>
       pg.transaction(async (tx) => {

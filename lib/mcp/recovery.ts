@@ -17,12 +17,15 @@ import { mediaContentTypeSchema } from "@/lib/schemas/media-asset";
 import { createMediaLibraryObjectKey } from "@/lib/storage/object-key";
 import { removeMcpChunks } from "./chunk-upload-storage";
 import { recoverMcpGenerations } from "./generation-recovery";
+import { recoverResearchAnalyses } from "./research-analysis-recovery";
 export async function recoverMcpOperations() {
   if (!getMcpEnvironment().ENABLE_MCP) return { recovered: 0 };
   const rows = await listMcpRecoveryOperations();
   let recovered = await recoverMcpGenerations();
+  recovered += await recoverResearchAnalyses();
   for (const op of rows) {
-    if (op.kind === "generate_media") continue;
+    if (op.kind === "generate_media" || op.kind === "research_analysis")
+      continue;
     if (op.status === "approved") {
       await dispatchApprovedPublication(op);
       recovered++;

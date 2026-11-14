@@ -16,6 +16,7 @@ import { roleAllowsScope } from "@/lib/mcp/policy";
 import { assertPublicationApprovalGrant } from "@/lib/mcp/publication-approval-policy";
 import { assertGenerationApprovalGrant } from "@/lib/mcp/generation-approval-policy";
 import { McpError } from "@/lib/mcp/errors";
+import { assertResearchApprovalGrant } from "@/lib/mcp/research-policy";
 export type McpFormState = { ok: boolean; message: string };
 export async function saveMcpGrantAction(
   _previous: McpFormState,
@@ -30,6 +31,8 @@ export async function saveMcpGrantAction(
       scopes: form.getAll("scopes"),
       publicationApprovalMode: form.get("publicationApprovalMode") ?? "manual",
       generationApprovalMode: form.get("generationApprovalMode") ?? "manual",
+      researchAnalysisApprovalMode:
+        form.get("researchAnalysisApprovalMode") ?? "manual",
     });
     const membership = await requireWorkspaceMembership({
       userId: user.id,
@@ -42,6 +45,7 @@ export async function saveMcpGrantAction(
       };
     assertPublicationApprovalGrant({ ...p, role: membership.role });
     assertGenerationApprovalGrant({ ...p, role: membership.role });
+    assertResearchApprovalGrant({ ...p, role: membership.role });
     await saveMcpGrant({ ...p, userId: user.id });
     await recordAuditEvent({
       workspaceId: p.workspaceId,
@@ -54,6 +58,7 @@ export async function saveMcpGrantAction(
         scopes: p.scopes,
         publicationApprovalMode: p.publicationApprovalMode,
         generationApprovalMode: p.generationApprovalMode,
+        researchAnalysisApprovalMode: p.researchAnalysisApprovalMode,
       },
     });
     revalidatePath("/app/settings/mcp");

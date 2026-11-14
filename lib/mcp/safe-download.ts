@@ -73,6 +73,7 @@ export async function withPublicDownload<T>(
     contentLength: number | null;
     sourceHost: string;
   }) => Promise<T>,
+  validateUrl?: (url: URL) => void,
 ): Promise<T> {
   const agent = new Agent({
     connect: { lookup: publicLookup, timeout: 10_000 },
@@ -80,6 +81,7 @@ export async function withPublicDownload<T>(
   try {
     let url = safeSourceUrl(source);
     for (let redirects = 0; redirects <= 3; redirects++) {
+      validateUrl?.(url);
       const response = await request(url, {
         dispatcher: agent,
         signal: AbortSignal.timeout(180_000),

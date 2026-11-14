@@ -1,3 +1,4 @@
+import { ResearchAnalysisBrowserApproval } from "@/components/mcp/ResearchAnalysisBrowserApproval";
 import { McpSettingsPage } from "@/components/mcp/McpSettingsPage";
 import { McpUploadPanel } from "@/components/mcp/McpUploadPanel";
 import { McpBrowserApproval } from "@/components/mcp/McpBrowserApproval";
@@ -12,6 +13,42 @@ import {
 const generationExpiry = new Date(Date.now() + 600000).toISOString();
 export function McpUiHarness() {
   const mode = new URLSearchParams(location.search).get("mode");
+  if (mode?.startsWith("research-analysis"))
+    return (
+      <main className="app-page">
+        <ResearchAnalysisBrowserApproval
+          operation={{
+            id: operationId,
+            workspaceId,
+            kind: "research_analysis",
+            status:
+              mode === "research-analysis-auto"
+                ? "prepared"
+                : "requires_approval",
+            result: null,
+            error: null,
+            href: "/app/mcp/operations/" + operationId,
+            expiresAt:
+              mode === "research-analysis-expired"
+                ? new Date(0).toISOString()
+                : generationExpiry,
+          }}
+          preview={{
+            accountName: "Example research account",
+            postUrl: "https://www.instagram.com/p/research/",
+            caption: "An original carousel about building useful tools.",
+            format: "carousel",
+            goal: "Study visual hooks and original experiments",
+            model: "gemini-3.5-flash-lite",
+            estimatedCostCents: 17,
+            maximumCostCents: 20,
+            maximumDurationSeconds: 120,
+            maximumBytes: 12582912,
+            expiresAt: generationExpiry,
+          }}
+        />
+      </main>
+    );
   if (mode?.startsWith("generation"))
     return (
       <main className="app-page">

@@ -175,3 +175,71 @@ test("settings endpoint copies by keyboard and viewer scopes stay disabled", asy
     page.getByRole("link", { name: "Publish post" }),
   ).toHaveAttribute("href", /workspaceId=11111111-1111-4111-8111-111111111111/);
 });
+
+test("research autonomy saves independently of generation and publication", async ({
+  page,
+}) => {
+  await page.goto("/harness.html?mode=settings-populated");
+  const card = page.locator('[data-slot="card"][aria-labelledby]').filter({
+    has: page.getByRole("heading", { name: "ChatGPT", exact: true }),
+  });
+  await expect(
+    card.getByRole("combobox", { name: "Research analysis approval" }),
+  ).toContainText("Require my approval");
+  await card
+    .getByRole("combobox", { name: "Research analysis approval" })
+    .click();
+  await page
+    .getByRole("option", { name: "Autonomous research analysis", exact: true })
+    .click();
+  await card
+    .getByRole("button", { name: "Save workspace permissions" })
+    .click();
+  const saved = await page.evaluate(() =>
+    JSON.parse(sessionStorage.getItem("saved-mcp-grant") ?? "{}"),
+  );
+  expect(saved.researchAnalysisApprovalMode).toBe("autonomous");
+  expect(saved.generationApprovalMode).toBe("manual");
+  expect(saved.publicationApprovalMode).toBe("manual");
+});
+for (const theme of ["light", "dark"]) {
+  test(`research analysis review is readable and explicit in ${theme}`, async ({
+    page,
+  }, testInfo) => {
+    await page.setViewportSize({ width: 390, height: 900 });
+    await page.addInitScript(
+      (mode) =>
+        document.addEventListener("DOMContentLoaded", () =>
+          document.documentElement.classList.toggle("dark", mode === "dark"),
+        ),
+      theme,
+    );
+    await page.goto("/harness.html?mode=research-analysis");
+    await expect(
+      page.getByRole("heading", { name: "Review media analysis" }),
+    ).toBeVisible();
+    await expect(page.getByText("$0.17 USD", { exact: true })).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Approve media analysis" }),
+    ).toBeEnabled();
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= window.innerWidth,
+      ),
+    ).toBe(true);
+    await page.screenshot({
+      path: testInfo.outputPath(`research-analysis-review-${theme}.png`),
+      fullPage: true,
+    });
+    await page.goto("/harness.html?mode=research-analysis-expired");
+    await expect(
+      page.getByRole("button", { name: "Approve media analysis" }),
+    ).toBeDisabled();
+    await expect(page.getByRole("alert")).toContainText("expired");
+    await page.goto("/harness.html?mode=research-analysis-auto");
+    await expect(
+      page.getByRole("button", { name: "Approve media analysis" }),
+    ).toHaveCount(0);
+    await expect(page.getByRole("status")).toContainText("Nothing has started");
+  });
+}

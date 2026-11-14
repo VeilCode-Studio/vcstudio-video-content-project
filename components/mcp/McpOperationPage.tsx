@@ -9,6 +9,8 @@ import { McpUploadPanel } from "./McpUploadPanel";
 import type { McpMediaPreview } from "@/lib/mcp/media-previews";
 import { generationPreviewSchema } from "@studio/contracts/mcp-generation";
 import { McpGenerationBrowserApproval } from "./McpGenerationBrowserApproval";
+import { researchAnalysisPreviewSchema } from "@studio/contracts/mcp-research";
+import { ResearchAnalysisBrowserApproval } from "./ResearchAnalysisBrowserApproval";
 export function McpOperationPage({
   operation,
   preview,
@@ -22,6 +24,7 @@ export function McpOperationPage({
 }) {
   const parsed = publicationPreviewSchema.safeParse(preview);
   const generation = generationPreviewSchema.safeParse(preview);
+  const research = researchAnalysisPreviewSchema.safeParse(preview);
   return (
     <div className="app-page">
       <header className="app-heading">
@@ -30,9 +33,16 @@ export function McpOperationPage({
           {operation.kind.replaceAll("_", " ")} · {operation.status}
         </p>
       </header>
-      {operation.kind === "generate_media" &&
+      {operation.kind === "research_analysis" &&
       ["requires_approval", "prepared"].includes(operation.status) &&
-      generation.success ? (
+      research.success ? (
+        <ResearchAnalysisBrowserApproval
+          operation={operation}
+          preview={research.data}
+        />
+      ) : operation.kind === "generate_media" &&
+        ["requires_approval", "prepared"].includes(operation.status) &&
+        generation.success ? (
         <McpGenerationBrowserApproval
           operation={operation}
           preview={generation.data}

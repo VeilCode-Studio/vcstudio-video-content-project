@@ -6,6 +6,7 @@ import { approveMcpPublication } from "@/lib/mcp/publishing-service";
 import { approveMcpGeneration } from "@/lib/mcp/generation-service";
 import { updateMcpOperation } from "@/db/repositories/mcp.repository";
 import { McpError } from "@/lib/mcp/errors";
+import { approveResearchAnalysis } from "@/lib/mcp/research-analysis-service";
 export async function decideMcpOperationAction(
   _previous: { ok: boolean; message: string },
   form: FormData,
@@ -23,6 +24,15 @@ export async function decideMcpOperationAction(
       p.workspaceId,
     );
     if (p.decision === "approve") {
+      if (operation.kind === "research_analysis") {
+        const result = await approveResearchAnalysis(context, operation.id);
+        return {
+          ok: !["failed", "expired", "cancelled"].includes(result.status),
+          message:
+            result.error ??
+            "Analysis authorized. Ask the assistant to check its progress.",
+        };
+      }
       if (operation.kind === "generate_media") {
         const result = await approveMcpGeneration(
           context,
@@ -67,9 +77,11 @@ export async function decideMcpOperationAction(
     return {
       ok: true,
       message:
-        operation.kind === "generate_media"
-          ? "Request cancelled. No new generation will be started by this request."
-          : "Request cancelled. No publication was started.",
+        operation.kind === "research_analysis"
+          ? "Analysis request cancelled. No new analysis will be started."
+          : operation.kind === "generate_media"
+            ? "Request cancelled. No new generation will be started by this request."
+            : "Request cancelled. No publication was started.",
     };
   } catch (error) {
     return {

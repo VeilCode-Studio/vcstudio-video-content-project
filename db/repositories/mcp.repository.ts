@@ -76,6 +76,7 @@ export async function saveMcpGrant(input: {
   scopes: McpScope[];
   publicationApprovalMode: McpPublicationApprovalMode;
   generationApprovalMode?: McpPublicationApprovalMode;
+  researchAnalysisApprovalMode?: McpPublicationApprovalMode;
 }) {
   // Reconnection is an explicit signed-in action, never an effect of seeing a token.
   const owned = await findMcpConnection(input.connectionId, input.userId);
@@ -93,6 +94,8 @@ export async function saveMcpGrant(input: {
           scopes: input.scopes,
           publicationApprovalMode: input.publicationApprovalMode,
           generationApprovalMode: input.generationApprovalMode ?? "manual",
+          researchAnalysisApprovalMode:
+            input.researchAnalysisApprovalMode ?? "manual",
           updatedAt: new Date(),
         },
       }),

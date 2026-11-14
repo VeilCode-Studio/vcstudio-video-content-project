@@ -132,3 +132,9 @@ export {
   STANDALONE_IMAGE_PROMPT_VERSION,
   renderStandaloneImagePrompt,
 } from "./standalone-image";
+
+export {
+  RESEARCH_MEDIA_ANALYSIS_PROMPT_VERSION,
+  RESEARCH_MEDIA_ANALYSIS_SYSTEM,
+  researchMediaAnalysisPrompt,
+} from "./research-media-analysis";

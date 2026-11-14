@@ -18,6 +18,7 @@ import {
   finishResearchRefresh,
   getResearchConnection,
   listResearchSnapshots,
+  listResearchObservationSummaries,
   saveResearchConnection,
   replaceResearchSources,
   deleteResearchAccount,
@@ -52,6 +53,9 @@ beforeAll(async () => {
       "migrations/20261114114656_social_account_research/migration.sql",
       "utf8",
     ),
+  );
+  await pg.exec(
+    `create table mcp_operations(id uuid primary key default gen_random_uuid(),workspace_id uuid,kind text,status text,input jsonb,result jsonb,approval_hash text,sealed_source text,fingerprint text,error text,updated_at timestamptz default now());`,
   );
   await saveResearchConnection({
     workspaceId,
@@ -93,6 +97,102 @@ async function claim(accountId: string, requestId = randomUUID()) {
   };
 }
 describe("isolated PostgreSQL research storage", () => {
+  it("projects bounded observation summaries without transferring saved post bodies", async () => {
+    const row = await account("145"),
+      operation = await claim(row.id);
+    expect(
+      await finishResearchRefresh({
+        workspaceId,
+        requestId: operation.requestId,
+        data,
+        safeError: null,
+      }),
+    ).toBe(true);
+    const summaries = await listResearchObservationSummaries(
+      workspaceId,
+      row.id,
+    );
+    expect(summaries[0]).toMatchObject({
+      id: operation.requestId,
+      followers: 100,
+      sampledPosts: 0,
+      hasMore: false,
+    });
+    expect(summaries[0]).not.toHaveProperty("data");
+    expect(summaries[0]).not.toHaveProperty("posts");
+    expect(
+      await listResearchObservationSummaries(otherWorkspace, row.id),
+    ).toEqual([]);
+  });
+  it("permanent deletion erases linked MCP inputs and findings in every state while retaining anonymous usage facts", async () => {
+    const target = await account("140");
+    const ids: string[] = [];
+    for (const status of [
+      "requires_approval",
+      "prepared",
+      "queued",
+      "running",
+      "succeeded",
+      "failed",
+    ]) {
+      const id = randomUUID();
+      ids.push(id);
+      await pg.query(
+        "insert into mcp_operations(id,workspace_id,kind,status,input,result,fingerprint) values($1,$2,'research_analysis',$3,$4::jsonb,$5::jsonb,'secret-fingerprint')",
+        [
+          id,
+          workspaceId,
+          status,
+          JSON.stringify({
+            accountId: target.id,
+            preview: { caption: "Erase all captions", estimatedCostCents: 17 },
+            request: { goal: "private goal" },
+          }),
+          JSON.stringify({
+            findings: { summary: "Erase all findings" },
+            providerSubmitted: true,
+          }),
+        ],
+      );
+    }
+    const otherId = randomUUID();
+    await pg.query(
+      "insert into mcp_operations(id,workspace_id,kind,status,input,result) values($1,$2,'research_analysis','succeeded',$3::jsonb,'{}')",
+      [otherId, otherWorkspace, JSON.stringify({ accountId: target.id })],
+    );
+    expect(
+      await deleteResearchAccount({
+        workspaceId,
+        accountId: target.id,
+        version: target.version,
+      }),
+    ).toBe(true);
+    const rows = (
+      await pg.query<{ input: unknown; result: unknown; status: string }>(
+        "select input,result,status from mcp_operations where id=any($1::uuid[])",
+        [ids],
+      )
+    ).rows;
+    expect(rows).toHaveLength(6);
+    for (const row of rows) {
+      expect(row.status).toBe("cancelled");
+      expect(row.input).toEqual({ deleted: true });
+      expect(row.result).toMatchObject({
+        deleted: true,
+        providerSubmitted: true,
+        estimatedCostCents: 17,
+      });
+    }
+    expect(JSON.stringify(rows)).not.toContain("Erase all");
+    expect(JSON.stringify(rows)).not.toContain(target.id);
+    expect(
+      (
+        await pg.query("select status from mcp_operations where id=$1", [
+          otherId,
+        ])
+      ).rows[0],
+    ).toEqual({ status: "succeeded" });
+  });
   it("encrypts and tenant-binds credentials and strips secrets from browser views", async () => {
     const connection = await getResearchConnection(workspaceId);
     expect(connection?.accessTokenSealed).not.toContain("test-token");

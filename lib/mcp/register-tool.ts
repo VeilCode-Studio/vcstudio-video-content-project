@@ -107,7 +107,13 @@ export function createToolRegistrar(
               "complete_media_upload",
             ].includes(name),
           openWorldHint:
-            scope === "vcstudio:publish" || name === "import_asset",
+            scope === "vcstudio:publish" ||
+            name === "import_asset" ||
+            [
+              "get_research_media",
+              "refresh_research_account",
+              "execute_research_analysis",
+            ].includes(name),
         },
       },
       async (parsed) => {

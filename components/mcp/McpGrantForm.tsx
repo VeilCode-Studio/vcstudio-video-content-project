@@ -11,6 +11,7 @@ import type { McpSettingsView } from "@/lib/mcp/settings-view";
 import { MCP_SCOPE_LABELS, MCP_SCOPE_TITLES } from "@/lib/mcp/scope-labels";
 import { McpPublicationApprovalField } from "./McpPublicationApprovalField";
 import { McpGenerationApprovalField } from "./McpGenerationApprovalField";
+import { McpResearchApprovalField } from "./McpResearchApprovalField";
 import { canConfigureAutonomousGeneration } from "@/lib/mcp/generation-approval-policy";
 import { canConfigureAutonomousPublishing } from "@/lib/mcp/publication-approval-policy";
 export function McpGrantForm({
@@ -23,6 +24,10 @@ export function McpGrantForm({
   activeWorkspaceId: string;
 }) {
   const [workspaceId, setWorkspaceId] = useState(activeWorkspaceId);
+  const [researchMode, setResearchMode] = useState<McpPublicationApprovalMode>(
+    connection.grants.find((g) => g.workspaceId === activeWorkspaceId)
+      ?.researchAnalysisApprovalMode ?? "manual",
+  );
   const [state, action, pending] = useActionState(saveMcpGrantAction, {
     ok: false,
     message: "",
@@ -51,6 +56,10 @@ export function McpGrantForm({
           value={workspaceId}
           onValueChange={(id) => {
             setWorkspaceId(id);
+            setResearchMode(
+              connection.grants.find((g) => g.workspaceId === id)
+                ?.researchAnalysisApprovalMode ?? "manual",
+            );
             setGenerationApprovalMode(
               connection.grants.find((g) => g.workspaceId === id)
                 ?.generationApprovalMode ?? "manual",
@@ -104,6 +113,13 @@ export function McpGrantForm({
           value={generationApprovalMode}
           onChange={setGenerationApprovalMode}
           owner={canConfigureAutonomousGeneration(selected?.role)}
+          disabled={pending}
+        />
+        <McpResearchApprovalField
+          id={`research-approval-${connection.id}`}
+          value={researchMode}
+          onChange={setResearchMode}
+          owner={selected?.role === "owner"}
           disabled={pending}
         />
       </fieldset>

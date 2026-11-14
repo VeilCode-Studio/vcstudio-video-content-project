@@ -14,6 +14,10 @@ const m = vi.hoisted(() => ({
   generationExecute: vi.fn(),
   generationConfirm: vi.fn(),
   generationStatus: vi.fn(),
+  researchAccount: vi.fn(),
+  researchObservation: vi.fn(),
+  researchSummaries: vi.fn(),
+  researchAnalyses: vi.fn(),
 }));
 vi.mock("@/lib/mcp/context", () => ({ authorizeMcp: m.authorize }));
 vi.mock("@/lib/mcp/rate-limit", () => ({ enforceMcpRateLimit: vi.fn() }));
@@ -55,6 +59,24 @@ vi.mock("@/lib/mcp/generation-service", () => ({
   executeMcpGeneration: m.generationExecute,
   approveMcpGeneration: m.generationConfirm,
   getMcpGenerationStatus: m.generationStatus,
+}));
+vi.mock("@/lib/social/research/environment", () => ({
+  isSocialResearchEnabled: () => true,
+}));
+vi.mock("@/db/repositories/social-research.repository", () => ({
+  findResearchAccount: m.researchAccount,
+  findResearchOperation: m.researchObservation,
+  listResearchObservationSummaries: m.researchSummaries,
+  listResearchAccounts: vi.fn(),
+  getResearchConnection: vi.fn(),
+  addResearchAccount: vi.fn(),
+  claimResearchRefresh: vi.fn(),
+  finishResearchRefresh: vi.fn(),
+}));
+vi.mock("@/db/repositories/research-analysis.repository", () => ({
+  listResearchAnalysisOperations: m.researchAnalyses,
+  consumeResearchAnalysis: vi.fn(),
+  listResearchAnalysisRecovery: vi.fn(),
 }));
 import { Client } from "@modelcontextprotocol/client";
 import {
@@ -116,9 +138,139 @@ async function client() {
   return instance;
 }
 describe("real MCP SDK interoperability", () => {
-  it("publishes explicit OAuth metadata for all 53 tools without exposing UI approvals to the model", async () => {
+  it("pages research captions and reads an exact post without duplicating captions in rankings", async () => {
+    m.researchAccount.mockResolvedValue({ id: mcpIds.asset });
+    const posts = Array.from({ length: 25 }, (_, i) => ({
+      id: `post-${i + 1}`,
+      url: `https://www.instagram.com/p/${i + 1}/`,
+      publishedAt: null,
+      text: `Caption ${i + 1}`,
+      format: "image",
+      likes: i,
+      comments: 1,
+      shares: null,
+    }));
+    m.researchObservation.mockResolvedValue({
+      id: mcpIds.post,
+      accountId: mcpIds.asset,
+      status: "succeeded",
+      createdAt: new Date(),
+      completedAt: new Date(),
+      data: {
+        platform: "instagram",
+        externalAccountId: "789",
+        name: "Account",
+        profileUrl: "https://www.instagram.com/account/",
+        biography: null,
+        followers: 100,
+        totalPosts: 30,
+        posts,
+        hasMore: true,
+        warnings: [],
+      },
+    });
+    const api = await client();
+    const result = await api.callTool({
+      name: "get_research_observation",
+      arguments: {
+        workspaceId: mcpIds.workspace,
+        snapshotId: mcpIds.post,
+        postPage: 2,
+      },
+    });
+    const parsed = JSON.parse(
+      result.content.find((item) => item.type === "text")!.text,
+    ).data;
+    expect(parsed.data.posts).toHaveLength(10);
+    expect(parsed.data.posts[0].id).toBe("post-11");
+    expect(parsed.pagination.hasMore).toBe(true);
+    expect(JSON.stringify(parsed.comparison)).not.toContain("Caption");
+    const single = await api.callTool({
+      name: "get_research_observation",
+      arguments: {
+        workspaceId: mcpIds.workspace,
+        snapshotId: mcpIds.post,
+        postId: "post-25",
+      },
+    });
+    expect(
+      JSON.parse(single.content.find((item) => item.type === "text")!.text).data
+        .data.posts,
+    ).toHaveLength(1);
+    const invalid = await api.callTool({
+      name: "get_research_observation",
+      arguments: {
+        workspaceId: mcpIds.workspace,
+        snapshotId: mcpIds.post,
+        postId: "forged",
+      },
+    });
+    expect(invalid.isError).toBe(true);
+    expect(m.researchObservation).toHaveBeenCalledWith(
+      mcpIds.workspace,
+      mcpIds.post,
+    );
+  });
+  it("returns database-projected research history/analysis summaries without loading whole snapshots", async () => {
+    m.researchAccount.mockResolvedValue({
+      id: mcpIds.asset,
+      platform: "instagram",
+      identifier: "business",
+      name: "Account",
+      notes: "Notes",
+      version: 1,
+      refreshedAt: null,
+      lastError: null,
+    });
+    m.researchSummaries.mockResolvedValue([
+      {
+        id: mcpIds.post,
+        capturedAt: new Date(),
+        followers: 100,
+        sampledPosts: 25,
+        hasMore: true,
+      },
+    ]);
+    m.researchAnalyses.mockResolvedValue([
+      {
+        id: mcpIds.operation,
+        status: "succeeded",
+        updatedAt: new Date(),
+        result: {
+          summary: "Visual hook",
+          coverage: { items: 1 },
+          source: { postId: "post-1" },
+        },
+      },
+    ]);
+    const result = await (
+      await client()
+    ).callTool({
+      name: "get_research_account",
+      arguments: {
+        workspaceId: mcpIds.workspace,
+        accountId: mcpIds.asset,
+        page: 1,
+      },
+    });
+    const parsed = JSON.parse(
+      result.content.find((item) => item.type === "text")!.text,
+    ).data;
+    expect(parsed.observations[0].sampledPosts).toBe(25);
+    expect(parsed.observations[0]).not.toHaveProperty("data");
+    expect(parsed.analyses[0].summary).toBe("Visual hook");
+    expect(parsed.analyses[0]).not.toHaveProperty("findings");
+    expect(m.researchObservation).not.toHaveBeenCalled();
+    expect(m.researchAnalyses).toHaveBeenCalledWith(
+      mcpIds.workspace,
+      mcpIds.asset,
+      true,
+    );
+  });
+
+  it("publishes explicit OAuth metadata for all 62 tools without exposing UI approvals to the model", async () => {
     const tools = (await (await client()).listTools()).tools;
-    expect(tools).toHaveLength(53);
+    expect(tools).toHaveLength(62);
     expect(
       tools.filter(
         (tool) =>
@@ -132,6 +284,25 @@ describe("real MCP SDK interoperability", () => {
         { type: "oauth2", scopes: expect.any(Array) },
       ]);
     }
+    for (const name of [
+      "prepare_research_analysis",
+      "execute_research_analysis",
+    ])
+      expect(
+        tools.find((tool) => tool.name === name)?._meta?.securitySchemes,
+      ).toEqual([{ type: "oauth2", scopes: ["vcstudio:generate"] }]);
+    for (const name of [
+      "list_research_accounts",
+      "get_research_account",
+      "get_research_observation",
+      "get_research_analysis_status",
+    ])
+      expect(
+        tools.find((tool) => tool.name === name)?.annotations?.readOnlyHint,
+      ).toBe(true);
+    expect(
+      tools.some((tool) => tool.name === "approve_research_analysis"),
+    ).toBe(false);
     for (const name of [
       "get_generation_options",
       "prepare_generation",

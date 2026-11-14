@@ -67,6 +67,7 @@ export const populatedSettings: McpSettingsView = {
           scopes: [...MCP_SCOPES],
           publicationApprovalMode: "manual",
           generationApprovalMode: "manual",
+          researchAnalysisApprovalMode: "manual",
           createdAt: new Date("2026-11-05T08:00:00Z"),
           updatedAt: new Date("2026-11-05T08:00:00Z"),
         },

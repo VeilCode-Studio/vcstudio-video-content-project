@@ -35,6 +35,7 @@ const context: McpContext = {
   grant: {
     publicationApprovalMode: "manual",
     generationApprovalMode: "manual",
+    researchAnalysisApprovalMode: "manual",
     connectionId: "connection",
     workspaceId: "workspace",
     scopes: ["vcstudio:edit"],

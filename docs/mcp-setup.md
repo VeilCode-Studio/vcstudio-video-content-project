@@ -1,5 +1,11 @@
 # VCStudio MCP v1 setup and verification
 
+## Research extension ? 15 November 2026 (release pending)
+
+MCP 1.4.0 adds nine research tools (62 registered, 60 assistant-callable). Saved observations, captions, public metrics, descriptive comparisons and stored media-analysis findings are readable through MCP. Assistants can add watchlist identities, explicitly refresh, inspect transient media references and prepare/execute/poll actual image/carousel/video-with-audio analysis. URLs alone are never treated as proof that media was viewed. No browser automation is required for owner-enabled autonomous analysis. Manual analysis uses the signed-in browser review; embedded analysis approval is not claimed for this release. Existing generation/publication MCP Apps stay intact.
+
+Research analysis has its own default-manual per-connection/workspace approval mode and requires Read, Media and Generate consent/grants. No new Clerk scope or OAuth configuration is required for clients already granted those scopes. Refresh tool discovery after release. The on-demand analysis worker uses bounded Google multimodal requests and the existing usage ledger; no paid retry or additional schedule is introduced. Production migration/configuration/worker/web rollout still requires approval. See [research tools, analysis and rollout](mcp-research.md).
+
 ## ElevenLabs extension — released 10 November 2026
 
 The 1.3.0 implementation adds voice discovery/preset creation and scene-video assignment/review: 53 registered tools, 51 assistant-callable. Generation keeps the existing Generate scope and manual/autonomous modes. Image/video API access remains disabled on the current Creator plan. The owner-approved nullable video/MCP ownership migration is applied in production with its hash recorded. Existing records are unchanged and the temporary migration branch is removed. Matching worker `20261110.2` and web deployment are live with synchronized internal-use settings. Authenticated MCP reads confirm version 1.3.0, all six scopes, saved autonomy and voice availability; image/video remain unavailable. Refresh connector tools for the four additions without resetting workspace grants or repeating existing Generate consent. See [ElevenLabs controls](elevenlabs-integration.md).

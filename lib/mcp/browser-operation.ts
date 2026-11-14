@@ -21,7 +21,8 @@ export async function loadBrowserMcpOperation(
   const scope =
     operation.kind === "publish_post"
       ? "vcstudio:publish"
-      : operation.kind === "generate_media"
+      : operation.kind === "generate_media" ||
+          operation.kind === "research_analysis"
         ? "vcstudio:generate"
         : operation.kind === "import_asset" || operation.kind === "assign_image"
           ? "vcstudio:media"

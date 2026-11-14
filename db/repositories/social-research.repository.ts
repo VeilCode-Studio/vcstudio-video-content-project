@@ -80,6 +80,32 @@ export async function findResearchOperation(
     .limit(1);
   return row ?? null;
 }
+/** MCP history summaries exclude all post bodies at the database boundary. */
+export async function listResearchObservationSummaries(
+  workspaceId: string,
+  accountId: string,
+  offset = 0,
+) {
+  return getDatabase()
+    .select({
+      id: snapshots.id,
+      capturedAt: sql<Date>`coalesce(${snapshots.completedAt},${snapshots.createdAt})`,
+      followers: sql<number | null>`${snapshots.data}->'followers'`,
+      sampledPosts: sql<number>`jsonb_array_length(${snapshots.data}->'posts')`,
+      hasMore: sql<boolean>`(${snapshots.data}->>'hasMore')::boolean`,
+    })
+    .from(snapshots)
+    .where(
+      and(
+        eq(snapshots.workspaceId, workspaceId),
+        eq(snapshots.accountId, accountId),
+        eq(snapshots.status, "succeeded"),
+      ),
+    )
+    .orderBy(desc(snapshots.createdAt), desc(snapshots.id))
+    .limit(11)
+    .offset(offset);
+}
 export async function saveResearchConnection(input: {
   workspaceId: string;
   connectedByUserId: string;
@@ -198,12 +224,23 @@ export async function deleteResearchAccount(input: {
 }): Promise<boolean> {
   const result = await getDatabase().execute<{ id: string }>(sql`
     with target as (
-      select id,workspace_id from social_research_accounts
+      select id,workspace_id,identifier,platform from social_research_accounts
       where id=${input.accountId}::uuid and workspace_id=${input.workspaceId}::uuid and version=${input.version}
       for update
+    ), cleared_mcp as (
+      update mcp_operations o set status='cancelled',approval_hash=null,sealed_source=null,
+        input='{"deleted":true}'::jsonb,fingerprint='deleted',
+        result=jsonb_build_object('deleted',true,'providerSubmitted',coalesce((o.result->>'providerSubmitted')::boolean,false),
+          'estimatedCostCents',coalesce(o.input->'preview'->'estimatedCostCents',o.result->'estimatedCostCents','0'::jsonb))
+          || case when o.result ? 'actualCostCents' then jsonb_build_object('actualCostCents',o.result->'actualCostCents') else '{}'::jsonb end,
+        error='Research account and all associated content permanently deleted.',updated_at=now()
+      from target t where o.workspace_id=t.workspace_id and o.kind in ('research_add','research_refresh','research_analysis')
+        and (o.input->>'accountId'=t.id::text or o.result->>'accountId'=t.id::text
+          or (o.input->'account'->>'identifier'=t.identifier and o.input->'account'->>'platform'=t.platform))
+      returning o.id
     ), removed_snapshots as (
       delete from social_research_snapshots s using target t
-      where s.account_id=t.id and s.workspace_id=t.workspace_id returning s.id
+      where s.account_id=t.id and s.workspace_id=t.workspace_id and (select count(*) from cleared_mcp)>=0 returning s.id
     ), removed_account as (
       delete from social_research_accounts a using target t
       where a.id=t.id and a.workspace_id=t.workspace_id

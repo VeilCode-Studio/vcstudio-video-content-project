@@ -12,7 +12,8 @@
     "./scene-media": "./src/scene-media.ts",
     "./voice-preset": "./src/voice-preset.ts",
     "./social-research": "./src/social-research.ts",
-    "./social-research-previews": "./src/social-research-previews.ts"
+    "./social-research-previews": "./src/social-research-previews.ts",
+    "./mcp-research": "./src/mcp-research.ts"
   },
   "dependencies": {
     "zod": "4.6.6"

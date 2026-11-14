@@ -39,6 +39,7 @@ export function mcpContextFixture(): McpContext {
       workspaceId: mcpIds.workspace,
       publicationApprovalMode: "manual",
       generationApprovalMode: "manual",
+      researchAnalysisApprovalMode: "manual",
       scopes: [...MCP_SCOPES],
       createdAt: now,
       updatedAt: now,

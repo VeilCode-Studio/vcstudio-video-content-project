@@ -9,6 +9,7 @@ vi.mock("server-only", () => ({}));
 const shared = vi.hoisted(() => ({ db: undefined as unknown }));
 vi.mock("@/db/drizzle", () => ({ getDatabase: () => shared.db }));
 import { consumeMcpGeneration } from "@/db/repositories/mcp-generation.repository";
+import { consumeResearchAnalysis } from "@/db/repositories/research-analysis.repository";
 import { settleMcpGeneration } from "@/db/commands/mcp-generation-commands";
 import { buildMcpGenerationReservationSql } from "@/db/commands/mcp-generation-reservation-sql";
 import {
@@ -66,6 +67,12 @@ beforeAll(async () => {
       "utf8",
     ),
   );
+  await pg.exec(
+    await readFile(
+      "migrations/20261114215623_mcp_research_analysis/migration.sql",
+      "utf8",
+    ),
+  );
   shared.db = drizzle({ client: pg });
 }, 30000);
 afterAll(() => pg.close());
@@ -102,6 +109,10 @@ async function reserve(
   return (await pg.query<{ id: string | null }>(q.sql, q.params)).rows[0].id;
 }
 describe("generated MCP media migration and money-safe SQL", () => {
+  it("keeps existing research grants manual after migration", async () => {
+    const grant = await findMcpGrant(mcpIds.connection, mcpIds.workspace);
+    expect(grant?.researchAnalysisApprovalMode).toBe("manual");
+  });
   it("does not overwrite a newer operation revision during recovery", async () => {
     const id = await operation("running");
     expect(
@@ -246,5 +257,94 @@ describe("generated MCP media migration and money-safe SQL", () => {
       "update workspace_members set role='owner'; update mcp_connections set revoked_at=now()",
     );
     expect(await consumeMcpGeneration(ctx, id)).toBeNull();
+  });
+});
+
+describe("research analysis SQL permissions and reservations", () => {
+  it("requires exact grant revisions, owner autonomy and account existence, then reserves only once", async () => {
+    await pg.exec(`create table if not exists social_research_accounts(id uuid primary key,workspace_id uuid,archived_at timestamptz);
+      insert into social_research_accounts values ('${mcpIds.asset}','${mcpIds.workspace}',null);
+      update workspace_members set role='owner';update mcp_connections set revoked_at=null,updated_at=now();
+      update mcp_workspace_grants set scopes='["vcstudio:read","vcstudio:media","vcstudio:generate"]',research_analysis_approval_mode='autonomous',updated_at=now();`);
+    const ctx = await context();
+    const id = await operation("prepared");
+    await pg.query(
+      "update mcp_operations set kind='research_analysis',input=jsonb_build_object('accountId',$1::text) where id=$2",
+      [mcpIds.asset, id],
+    );
+    expect(
+      await consumeResearchAnalysis(
+        { ...ctx, grant: { ...ctx.grant, updatedAt: new Date(0) } },
+        id,
+        false,
+      ),
+    ).toBe(false);
+    await pg.exec("update workspace_members set role='editor'");
+    expect(await consumeResearchAnalysis(ctx, id, false)).toBe(false);
+    await pg.exec("update workspace_members set role='owner'");
+    expect(await consumeResearchAnalysis(ctx, id, false)).toBe(true);
+    expect(await consumeResearchAnalysis(ctx, id, false)).toBe(false);
+    const reserveAnalysis = async (
+      workspaceId = mcpIds.workspace,
+      maximumCostCents = 17,
+    ) => {
+      const q = new PgDialect().sqlToQuery(
+        buildMcpGenerationReservationSql({
+          workspaceId,
+          operationId: id,
+          kind: "research_analysis",
+          estimatedCostCents: 17,
+          maximumCostCents,
+          dailyBudgetCents: 500,
+          monthlyBudgetCents: 1000,
+        }),
+      );
+      return (await pg.query<{ id: string | null }>(q.sql, q.params)).rows[0]!
+        .id;
+    };
+    expect(await reserveAnalysis(otherWorkspace)).toBeNull();
+    expect(await reserveAnalysis(mcpIds.workspace, 16)).toBeNull();
+    const reservation = await reserveAnalysis();
+    expect(reservation).not.toBeNull();
+    expect(await reserveAnalysis()).toBe(reservation);
+    expect(
+      (
+        await pg.query(
+          "select operation_type,reserved_cost_cents from usage_reservations where id=$1",
+          [reservation],
+        )
+      ).rows[0],
+    ).toEqual({ operation_type: "research_analysis", reserved_cost_cents: 17 });
+    await settleMcpGeneration(mcpIds.workspace, id, 2);
+    await settleMcpGeneration(mcpIds.workspace, id, 2);
+    expect(
+      (
+        await pg.query(
+          "select count(*)::int as count from usage_events where reservation_id=$1 and event_type='reconciled'",
+          [reservation],
+        )
+      ).rows[0],
+    ).toEqual({ count: 1 });
+  });
+  it("accepts a manual browser decision for an editor but never an autonomous model claim", async () => {
+    await pg.exec(
+      "update workspace_members set role='editor';update mcp_workspace_grants set research_analysis_approval_mode='manual',updated_at=now()",
+    );
+    const ctx = await context(),
+      id = await operation("requires_approval");
+    await pg.query(
+      "update mcp_operations set kind='research_analysis',input=jsonb_build_object('accountId',$1::text) where id=$2",
+      [mcpIds.asset, id],
+    );
+    expect(await consumeResearchAnalysis(ctx, id, false)).toBe(false);
+    expect(await consumeResearchAnalysis(ctx, id, true)).toBe(true);
+    expect(await consumeResearchAnalysis(ctx, id, true)).toBe(false);
+  });
+  it("rejects autonomous configuration without all required scopes", async () => {
+    await expect(
+      pg.exec(
+        "update mcp_workspace_grants set scopes='[\"vcstudio:read\"]',research_analysis_approval_mode='autonomous'",
+      ),
+    ).rejects.toThrow();
   });
 });

@@ -1,5 +1,6 @@
 import { elevenLabsEnvironmentSchema } from "@/lib/elevenlabs/environment";
 import { z } from "zod";
+import { researchAnalysisEnvironmentSchema } from "@/lib/social/research/analysis-environment";
 import { decodeEncryptionKey } from "@/lib/crypto/secret-box";
 
 export const privateAccessEnvironmentSchema = z.object({
@@ -32,6 +33,9 @@ export const mcpEnvironmentSchema = z.object({
 });
 
 export const serverEnvironmentSchema = z.object({
+  ...researchAnalysisEnvironmentSchema.omit({
+    GOOGLE_AI_VIDEO_GENERATION_API_KEY: true,
+  }).shape,
   ...elevenLabsEnvironmentSchema.shape,
   ...privateAccessEnvironmentSchema.shape,
   CLERK_SECRET_KEY: z.string().min(1, "CLERK_SECRET_KEY is required"),

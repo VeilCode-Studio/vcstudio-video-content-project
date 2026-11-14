@@ -37,6 +37,9 @@ export const mcpGrantInput = z.object({
   scopes: z.array(mcpScopeSchema).max(MCP_SCOPES.length),
   publicationApprovalMode: mcpPublicationApprovalModeSchema.default("manual"),
   generationApprovalMode: mcpGenerationApprovalModeSchema.default("manual"),
+  researchAnalysisApprovalMode: z
+    .enum(["manual", "autonomous"])
+    .default("manual"),
 });
 export const mcpWorkspaceInput = z.object({ workspaceId: z.uuid() });
 /** Persisted display framing, distinct from a scene image's storage canvas. */

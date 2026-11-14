@@ -18,9 +18,23 @@ const keysByFile = new Map(
 );
 
 const rules = {
+  ...Object.fromEntries(
+    [
+      "ENABLE_RESEARCH_MEDIA_ANALYSIS",
+      "RESEARCH_ANALYSIS_MODEL",
+      "RESEARCH_ANALYSIS_INPUT_COST_PER_MILLION_CENTS",
+      "RESEARCH_ANALYSIS_OUTPUT_COST_PER_MILLION_CENTS",
+    ].map((key) => [
+      key,
+      {
+        required: [".env.example", ".env", ".env.vercel", ".env.trigger"],
+        forbidden: [],
+      },
+    ]),
+  ),
   ENABLE_SOCIAL_RESEARCH: {
     required: [".env.example"],
-    forbidden: [".env.trigger"],
+    forbidden: [],
   },
   ...Object.fromEntries(
     [

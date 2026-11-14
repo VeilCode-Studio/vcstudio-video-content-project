@@ -12,18 +12,7 @@ type SceneImageGeneration = {
 type SceneImageReservation = {
   workspaceId: string;
   projectId: string | null;
-  operationType:
-    | "media_generation"
-    | "video_generation"
-    | "scene_analysis"
-    | "scene_image_generation"
-    | "scene_audio_generation"
-    | "video_render"
-    | "script_generation"
-    | "title_generation"
-    | "thumbnail_generation"
-    | "scene_video_generation"
-    | "chapter_generation";
+  operationType: import("@/lib/usage/usage-ledger").UsageOperationType;
   imageGenerationId: string | null;
   status: "pending" | "reconciled" | "released";
   reservedCostCents: number;

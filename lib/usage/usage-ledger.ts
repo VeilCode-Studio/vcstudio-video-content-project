@@ -36,6 +36,7 @@ export type UsageLedgerEntry = {
 };
 
 export const USAGE_OPERATION_LABELS: Record<UsageOperationType, string> = {
+  research_analysis: "Research media analysis",
   media_generation: "Library media generation",
   video_generation: "Video generation",
   scene_analysis: "Scene analysis",
@@ -56,6 +57,7 @@ export const USAGE_STATUS_LABELS: Record<UsageReservationStatus, string> = {
 };
 
 export const USAGE_OPERATION_PROVIDERS: Record<UsageOperationType, string> = {
+  research_analysis: "google",
   media_generation: "media provider",
   video_generation: "video provider",
   scene_analysis: "openai",
