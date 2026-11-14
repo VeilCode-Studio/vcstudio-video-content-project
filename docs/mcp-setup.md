@@ -1,10 +1,10 @@
 # VCStudio MCP v1 setup and verification
 
-## Research extension ? 15 November 2026 (release pending)
+## Research extension ? released 15 November 2026
 
 MCP 1.4.0 adds nine research tools (62 registered, 60 assistant-callable). Saved observations, captions, public metrics, descriptive comparisons and stored media-analysis findings are readable through MCP. Assistants can add watchlist identities, explicitly refresh, inspect transient media references and prepare/execute/poll actual image/carousel/video-with-audio analysis. URLs alone are never treated as proof that media was viewed. No browser automation is required for owner-enabled autonomous analysis. Manual analysis uses the signed-in browser review; embedded analysis approval is not claimed for this release. Existing generation/publication MCP Apps stay intact.
 
-Research analysis has its own default-manual per-connection/workspace approval mode and requires Read, Media and Generate consent/grants. No new Clerk scope or OAuth configuration is required for clients already granted those scopes. Refresh tool discovery after release. The on-demand analysis worker uses bounded Google multimodal requests and the existing usage ledger; no paid retry or additional schedule is introduced. Production migration/configuration/worker/web rollout still requires approval. See [research tools, analysis and rollout](mcp-research.md).
+Research analysis has its own default-manual per-connection/workspace approval mode and requires Read, Media and Generate consent/grants. No new Clerk scope or OAuth configuration is required for clients already granted those scopes. Refresh tool discovery after release. The on-demand analysis worker uses bounded Google multimodal requests and the existing usage ledger; no paid retry or additional schedule is introduced. The approved migration/hash are recorded, its temporary branch is removed, worker `20261114.1` and the web app are live with synchronized configuration. Existing ChatGPT/Claude owner grants allow autonomous research analysis; their generation/publication modes remain unchanged. Authenticated MCP read-back confirms version 1.4.0 and research analysis available. No paid analysis or public post ran during rollout. See [research tools, analysis and rollout](mcp-research.md).
 
 ## ElevenLabs extension — released 10 November 2026
 

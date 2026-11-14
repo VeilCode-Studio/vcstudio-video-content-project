@@ -2,7 +2,7 @@
 
 ## Delivery state
 
-Implemented locally on 15 November 2026; production release is pending approval. MCP server version 1.4.0 exposes 62 registered tools, of which 60 are assistant-callable. Existing generation/publication approvals remain app-only tools; analysis cannot be approved by an ordinary model-supplied Boolean. The manual analysis review uses the signed-in browser fallback. An autonomous analysis grant completes prepare/execute/status through MCP with no browser step.
+Released to production on 15 November 2026 as implementation commit `f9255a0`. MCP server version 1.4.0 exposes 62 registered tools, of which 60 are assistant-callable. Existing generation/publication approvals remain app-only tools; analysis cannot be approved by an ordinary model-supplied Boolean. The manual analysis review uses the signed-in browser fallback. An autonomous analysis grant completes prepare/execute/status through MCP with no browser step.
 
 ## Tools
 
@@ -20,7 +20,7 @@ Implemented locally on 15 November 2026; production release is pending approval.
 
 Every call specifies its workspace and resolves current membership, connection state, grants and OAuth scopes. Research refresh/processing requires owner/editor capabilities; viewers can read saved research only. Meta credentials remain separate from AI-client grants. MCP cannot authorize Meta, change its scopes, enable Marketing or grant itself autonomy. Third-party captions, images, transcripts and analysis text are untrusted evidence, never instructions to execute.
 
-Saved findings are workspace research: authorized Read clients can retrieve completed findings through `get_research_account`, including findings produced by another authorized connection. Operation execution remains bound to the creating connection/user. Completed findings/status are readable as workspace research with Read permission. Returned workspace findings omit operation inputs, credential material and private authorization fingerprints.
+Saved findings are workspace research: authorized Read clients can retrieve completed findings through summary reads in `get_research_account` and full findings in `get_research_analysis_status`, including findings produced by another authorized connection. Operation execution remains bound to the creating connection/user. Completed findings/status are readable as workspace research with Read permission. Returned workspace findings omit operation inputs, credential material and private authorization fingerprints.
 
 ## Approval and budgets
 
@@ -66,7 +66,7 @@ Shared validated web/worker configuration:
 
 The generated migration `20261114215623_mcp_research_analysis` adds the default-manual grant column, its mode/scope constraints and the usage enum/ownership constraint extension. It adds no table, media storage or automatic backfill. Existing generation/publication approval modes are unchanged. Do not run schema push or apply it to production without the prepared migration's approval.
 
-After approval: apply/record the migration, remove only its named temporary test branch, synchronize analysis flags/model/rates and the worker's research flag, deploy the matching worker and web app, then enable analysis and only explicitly approved autonomous grants. Refresh ChatGPT/Claude tool discovery. Existing clients with Read/Media/Generate consent need no new Clerk scope. Verify capabilities read-only before a separate, explicitly cost-bounded real analysis. Release verification itself uses mocked providers and does not spend credits.
+The owner-approved rollout applied/recorded the migration and removed only temporary branch `br-blue-sun-ai9zlxfb`. Matching worker `20261114.1` and web deployment `dpl_HXJEfMrhow7Dy5Q5jN6iY6TrJL2U` are live. Web and worker analysis/research flags are enabled with the documented model/rates and existing Google key; Marketing remains disabled. The two existing ChatGPT/Claude owner grants have autonomous research analysis, with generation/publication permissions preserved and audited. New grants remain manual. Local development and `.env.example` retain the default-disabled analysis flag. Refresh client tool discovery. Existing clients with Read/Media/Generate consent need no new Clerk scope. A separate, explicitly cost-bounded real analysis remains the next provider/client acceptance check; no paid analysis ran during rollout.
 
 ## Verification
 
@@ -75,3 +75,5 @@ The affected regression run passed 497 tests and 44 browser journeys, including 
 The production-clone migration test preserves business counts and both existing grants default to manual analysis approval. Actual ChatGPT/Claude tool refresh and live Google/Meta media analysis remain client/provider acceptance checks; mocked tests do not establish universal media access.
 
 Official references: [Google video understanding](https://ai.google.dev/gemini-api/docs/video-understanding), [structured output](https://ai.google.dev/gemini-api/docs/structured-output), [token counting](https://ai.google.dev/gemini-api/docs/tokens), [pricing](https://ai.google.dev/gemini-api/docs/pricing).
+
+Live read-only verification confirms version 1.4.0, all six effective scopes, `socialResearch: true`, `researchMediaAnalysis: true` and autonomous research/generation/publication for the existing ChatGPT connection. Independent database reads confirm both approved grants and audit records. Google model metadata returned 200 for the configured model without a billable request. The landing page returns 200, private settings redirect to sign-in, and anonymous MCP POST returns 401 with an OAuth challenge.
