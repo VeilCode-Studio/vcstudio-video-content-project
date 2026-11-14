@@ -27,3 +27,14 @@ export async function refreshResearchSourcesAction() {
   await new Promise((resolve) => setTimeout(resolve, 500));
   return { ok: true, sourceCount: 1 };
 }
+export async function deleteResearchAccountAction(input: unknown) {
+  sessionStorage.setItem("research-delete-request", JSON.stringify(input));
+  await new Promise((resolve) => setTimeout(resolve, 500));
+  return new URLSearchParams(location.search).has("deleteFail")
+    ? {
+        ok: false,
+        error:
+          "This research account changed. Refresh the page before deleting.",
+      }
+    : { ok: true };
+}

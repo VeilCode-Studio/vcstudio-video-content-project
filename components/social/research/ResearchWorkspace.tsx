@@ -44,6 +44,7 @@ import { ResearchAccountForm } from "./ResearchAccountForm";
 import { ResearchSnapshotPanel } from "./ResearchSnapshotPanel";
 import { researchDate } from "@/lib/social/research/view";
 import { ResearchAuthorizationFeedback } from "./ResearchAuthorizationFeedback";
+import { DeleteResearchAccountDialog } from "./DeleteResearchAccountDialog";
 
 export type ResearchWorkspaceProps = {
   enabled: boolean;
@@ -268,16 +269,23 @@ export function ResearchWorkspace(props: ResearchWorkspaceProps) {
                     ) : null}
                   </div>
                   {props.canResearch ? (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      disabled={pending}
-                      onClick={() => setArchiveOpen(true)}
-                    >
-                      <ArchiveIcon />
-                      Archive
-                    </Button>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        disabled={pending}
+                        onClick={() => setArchiveOpen(true)}
+                      >
+                        <ArchiveIcon />
+                        Archive
+                      </Button>
+                      <DeleteResearchAccountDialog
+                        key={selected.id}
+                        account={selected}
+                        disabled={pending}
+                      />
+                    </div>
                   ) : null}
                 </div>
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-end">

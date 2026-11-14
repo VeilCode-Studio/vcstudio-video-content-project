@@ -190,6 +190,30 @@ export async function archiveResearchAccount(input: {
   return Boolean(row);
 }
 
+/** Purge the account and every observation/refresh attempt in one atomic statement. */
+export async function deleteResearchAccount(input: {
+  workspaceId: string;
+  accountId: string;
+  version: number;
+}): Promise<boolean> {
+  const result = await getDatabase().execute<{ id: string }>(sql`
+    with target as (
+      select id,workspace_id from social_research_accounts
+      where id=${input.accountId}::uuid and workspace_id=${input.workspaceId}::uuid and version=${input.version}
+      for update
+    ), removed_snapshots as (
+      delete from social_research_snapshots s using target t
+      where s.account_id=t.id and s.workspace_id=t.workspace_id returning s.id
+    ), removed_account as (
+      delete from social_research_accounts a using target t
+      where a.id=t.id and a.workspace_id=t.workspace_id
+        and (select count(*) from removed_snapshots)>=0
+      returning a.id
+    ) select id from removed_account
+  `);
+  return result.rows.length === 1;
+}
+
 /** Lease + durable operation are one statement, so retries cannot start duplicate provider work. */
 export async function claimResearchRefresh(input: {
   workspaceId: string;
@@ -215,7 +239,7 @@ export async function claimResearchRefresh(input: {
   return result.rows.length === 1;
 }
 
-/** A disconnected/replaced research grant cannot commit a late provider result. */
+/** Lock account before snapshot, matching deletion; revoked grants and deleted accounts cannot accept late results. */
 export async function finishResearchRefresh(input: {
   workspaceId: string;
   requestId: string;
@@ -223,10 +247,16 @@ export async function finishResearchRefresh(input: {
   safeError: string | null;
 }) {
   const result = await getDatabase().execute<{ id: string }>(sql`
-    with completed as (
+    with locked_account as (
+      select a.id from social_research_accounts a
+      join social_research_snapshots existing on existing.account_id=a.id and existing.workspace_id=a.workspace_id
+      where existing.id=${input.requestId}::uuid and a.workspace_id=${input.workspaceId}::uuid
+      for update of a
+    ), completed as (
       update social_research_snapshots s set status=${input.data ? "succeeded" : "failed"},data=${input.data ? JSON.stringify(input.data) : null}::jsonb,
         safe_error=${input.safeError},completed_at=now(),updated_at=now()
       where s.id=${input.requestId}::uuid and s.workspace_id=${input.workspaceId}::uuid and s.status='running'
+        and exists(select 1 from locked_account a where a.id=s.account_id)
         and (${input.data === null} or exists(select 1 from social_research_connections c where c.workspace_id=s.workspace_id and c.revision=s.connection_revision and c.revoked_at is null and c.access_token_sealed is not null and c.expires_at>now()))
       returning s.id,s.account_id,s.workspace_id,s.created_at
     )

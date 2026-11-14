@@ -10,6 +10,7 @@ const mocks = vi.hoisted(() => ({
   invalidate: vi.fn(),
   audit: vi.fn(),
   sources: vi.fn(),
+  remove: vi.fn(),
 }));
 vi.mock("@/lib/auth/workspace-context", () => ({
   getAuthenticatedWorkspaceContext: mocks.context,
@@ -21,6 +22,7 @@ vi.mock("@/db/repositories/social-research.repository", () => ({
   addResearchAccount: mocks.add,
   archiveResearchAccount: mocks.archive,
   disconnectResearchConnection: mocks.disconnect,
+  deleteResearchAccount: mocks.remove,
 }));
 vi.mock("@/lib/social/research/refresh", () => ({
   refreshResearchAccount: mocks.refresh,
@@ -38,6 +40,7 @@ import {
   disconnectResearchAction,
   refreshResearchAccountAction,
   refreshResearchSourcesAction,
+  deleteResearchAccountAction,
 } from "@/app/(authenticated)/app/social/research/actions";
 const workspaceId = "11111111-1111-4111-8111-111111111111";
 const accountId = "22222222-2222-4222-8222-222222222222";
@@ -51,9 +54,69 @@ beforeEach(() => {
   mocks.add.mockResolvedValue({ id: accountId });
   mocks.archive.mockResolvedValue(true);
   mocks.refresh.mockResolvedValue(accountId);
+  mocks.remove.mockResolvedValue(true);
   vi.spyOn(console, "error").mockImplementation(() => {});
 });
 describe("research server-action authorization", () => {
+  it.each(["owner", "editor"] as const)(
+    "allows %s deletion only in the authenticated workspace, with an anonymous audit event",
+    async (role) => {
+      mocks.context.mockResolvedValue(auth(role));
+      expect(
+        await deleteResearchAccountAction({
+          accountId,
+          version: 1,
+          workspaceId: "forged",
+        }),
+      ).toEqual({ ok: true });
+      expect(mocks.remove).toHaveBeenCalledWith({
+        workspaceId,
+        accountId,
+        version: 1,
+      });
+      expect(mocks.audit).toHaveBeenCalledWith({
+        workspaceId,
+        actorUserId: "owner",
+        action: "platform_disconnected",
+        targetType: "social_research_account",
+        metadata: { operation: "permanent_delete" },
+      });
+      expect(JSON.stringify(mocks.audit.mock.calls)).not.toContain(accountId);
+      expect(mocks.invalidate).toHaveBeenCalledWith("/app/social/research");
+    },
+  );
+  it("blocks viewer, missing-session and disabled deletion", async () => {
+    for (const ctx of [auth("viewer"), null]) {
+      mocks.context.mockResolvedValue(ctx);
+      expect(
+        (await deleteResearchAccountAction({ accountId, version: 1 })).ok,
+      ).toBe(false);
+    }
+    mocks.context.mockResolvedValue(auth("owner"));
+    mocks.enabled.mockReturnValue(false);
+    expect(
+      (await deleteResearchAccountAction({ accountId, version: 1 })).ok,
+    ).toBe(false);
+    expect(mocks.remove).not.toHaveBeenCalled();
+    expect(mocks.audit).not.toHaveBeenCalled();
+  });
+  it("rejects invalid or stale deletion requests without claiming success", async () => {
+    for (const input of [
+      { accountId: "bad", version: 1 },
+      { accountId, version: 0 },
+      { accountId, version: "1" },
+    ])
+      expect((await deleteResearchAccountAction(input)).ok).toBe(false);
+    expect(mocks.remove).not.toHaveBeenCalled();
+    mocks.remove.mockResolvedValue(false);
+    expect(
+      await deleteResearchAccountAction({ accountId, version: 1 }),
+    ).toMatchObject({
+      ok: false,
+      error: expect.stringContaining("changed or has already been removed"),
+    });
+    expect(mocks.audit).not.toHaveBeenCalled();
+  });
   it("allows only current owners to refresh source discovery", async () => {
     mocks.sources.mockResolvedValueOnce(1);
     expect(await refreshResearchSourcesAction()).toEqual({

@@ -18,6 +18,11 @@ export type ResearchAuthorizationFailure = z.infer<
 export const researchPlatformSchema = z.enum(["facebook", "instagram"]);
 export type ResearchPlatform = z.infer<typeof researchPlatformSchema>;
 
+export const deleteResearchAccountInputSchema = z.object({
+  accountId: z.uuid(),
+  version: z.number().int().positive(),
+});
+
 export const researchAccountInputSchema = z
   .object({
     platform: researchPlatformSchema,

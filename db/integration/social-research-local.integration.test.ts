@@ -20,6 +20,7 @@ import {
   listResearchSnapshots,
   saveResearchConnection,
   replaceResearchSources,
+  deleteResearchAccount,
 } from "@/db/repositories/social-research.repository";
 import { researchConnectionView } from "@/lib/social/research/view";
 import {
@@ -257,6 +258,129 @@ describe("isolated PostgreSQL research storage", () => {
     });
     expect(restored?.id).toBe(row.id);
     expect(restored?.version).toBe(row.version + 2);
+  });
+  it("permanently deletes every research record, isolates tenants and rejects late refresh results", async () => {
+    const target = await account("131");
+    const other = await account("132");
+    const running = await claim(target.id);
+    const otherOperation = await claim(other.id);
+    expect(running.result).toBe(true);
+    expect(otherOperation.result).toBe(true);
+    const completedId = randomUUID(),
+      failedId = randomUUID();
+    await pg.query(
+      `insert into social_research_snapshots(id,workspace_id,account_id,status,connection_revision,data,completed_at,safe_error) values ($1,$2,$3,'succeeded',1,$4::jsonb,now(),null),($5,$2,$3,'failed',1,null,now(),'failed transfer')`,
+      [completedId, workspaceId, target.id, JSON.stringify(data), failedId],
+    );
+    const beforeGrant = await getResearchConnection(workspaceId);
+    expect(
+      await deleteResearchAccount({
+        workspaceId: otherWorkspace,
+        accountId: target.id,
+        version: target.version,
+      }),
+    ).toBe(false);
+    expect(
+      await deleteResearchAccount({
+        workspaceId,
+        accountId: target.id,
+        version: target.version + 1,
+      }),
+    ).toBe(false);
+    expect(
+      (
+        await pg.query<{ count: number }>(
+          `select count(*)::int as count from social_research_snapshots where account_id=$1`,
+          [target.id],
+        )
+      ).rows[0]?.count,
+    ).toBe(3);
+    expect(
+      await deleteResearchAccount({
+        workspaceId,
+        accountId: target.id,
+        version: target.version,
+      }),
+    ).toBe(true);
+    expect(await findResearchAccount(workspaceId, target.id)).toBeNull();
+    for (const id of [running.requestId, completedId, failedId])
+      expect(await findResearchOperation(workspaceId, id)).toBeNull();
+    expect(await listResearchSnapshots(workspaceId, target.id)).toEqual([]);
+    expect(
+      await finishResearchRefresh({
+        workspaceId,
+        requestId: running.requestId,
+        data,
+        safeError: null,
+      }),
+    ).toBe(false);
+    expect(
+      await finishResearchRefresh({
+        workspaceId,
+        requestId: running.requestId,
+        data: null,
+        safeError: "late error",
+      }),
+    ).toBe(false);
+    expect((await claim(target.id)).result).toBe(false);
+    expect(await findResearchAccount(workspaceId, other.id)).not.toBeNull();
+    expect(
+      await findResearchOperation(workspaceId, otherOperation.requestId),
+    ).not.toBeNull();
+    expect(await getResearchConnection(workspaceId)).toEqual(beforeGrant);
+    const replacement = await account("131");
+    expect(replacement.id).not.toBe(target.id);
+    expect(await listResearchSnapshots(workspaceId, replacement.id)).toEqual(
+      [],
+    );
+  });
+  it("rolls back observation removal if deleting the parent account fails", async () => {
+    const target = await account("134");
+    const running = await claim(target.id);
+    await pg.exec(
+      `create function reject_research_test_delete() returns trigger language plpgsql as $$begin raise exception 'test delete failure'; end;$$; create trigger reject_research_test_delete before delete on social_research_accounts for each row when(old.id='${target.id}'::uuid) execute function reject_research_test_delete();`,
+    );
+    try {
+      await expect(
+        deleteResearchAccount({
+          workspaceId,
+          accountId: target.id,
+          version: target.version,
+        }),
+      ).rejects.toThrow();
+      expect(await findResearchAccount(workspaceId, target.id)).not.toBeNull();
+      expect(
+        await findResearchOperation(workspaceId, running.requestId),
+      ).not.toBeNull();
+    } finally {
+      await pg.exec(
+        "drop trigger reject_research_test_delete on social_research_accounts; drop function reject_research_test_delete();",
+      );
+    }
+  });
+  it("can permanently remove a previously archived research account", async () => {
+    const target = await account("133");
+    expect(
+      await archiveResearchAccount({
+        workspaceId,
+        accountId: target.id,
+        version: target.version,
+      }),
+    ).toBe(true);
+    expect(
+      await deleteResearchAccount({
+        workspaceId,
+        accountId: target.id,
+        version: target.version + 1,
+      }),
+    ).toBe(true);
+    expect(
+      (
+        await pg.query(`select id from social_research_accounts where id=$1`, [
+          target.id,
+        ])
+      ).rows,
+    ).toEqual([]);
   });
   it("source repair is tenant/revision guarded and preserves credential and scopes", async () => {
     const before = await getResearchConnection(workspaceId);

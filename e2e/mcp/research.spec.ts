@@ -1,5 +1,100 @@
 import { expect, test } from "@playwright/test";
 
+for (const theme of ["light", "dark"]) {
+  test(`permanent research deletion requires confirmation in ${theme}`, async ({
+    page,
+  }, testInfo) => {
+    await page.setViewportSize({ width: 390, height: 900 });
+    await page.goto(`/research.html?theme=${theme}`);
+    await page
+      .getByRole("button", { name: /^Delete research account / })
+      .click();
+    const dialog = page.getByRole("dialog");
+    await expect(
+      dialog.getByRole("heading", {
+        name: "Delete research account permanently?",
+      }),
+    ).toBeVisible();
+    await expect(
+      dialog.getByText(/All successful, failed and pending refresh records/),
+    ).toBeVisible();
+    await expect(
+      dialog.getByRole("button", { name: "Keep account" }),
+    ).toBeFocused();
+    expect(
+      await page.evaluate(() =>
+        sessionStorage.getItem("research-delete-request"),
+      ),
+    ).toBeNull();
+    await page.screenshot({
+      path: testInfo.outputPath(`delete-research-${theme}.png`),
+      fullPage: true,
+    });
+    expect(
+      await dialog.evaluate((el) => el.scrollWidth <= el.clientWidth),
+    ).toBe(true);
+    await dialog.getByRole("button", { name: "Keep account" }).click();
+    await expect(dialog).not.toBeVisible();
+    expect(
+      await page.evaluate(() =>
+        sessionStorage.getItem("research-delete-request"),
+      ),
+    ).toBeNull();
+    await page
+      .getByRole("button", { name: /^Delete research account / })
+      .click();
+    await dialog
+      .getByRole("button", { name: "Delete account and all research" })
+      .click();
+    await expect(
+      dialog.getByRole("button", { name: "Deleting…" }),
+    ).toBeDisabled();
+    await expect(dialog).not.toBeVisible();
+    expect(
+      JSON.parse(
+        (await page.evaluate(() =>
+          sessionStorage.getItem("research-delete-request"),
+        ))!,
+      ),
+    ).toEqual({
+      accountId: "11111111-1111-4111-8111-111111111111",
+      version: 1,
+    });
+    expect(
+      await page.evaluate(() =>
+        sessionStorage.getItem("research-router-refresh"),
+      ),
+    ).toBe("true");
+    await expect(page).toHaveURL(/\/app\/social\/research$/);
+  });
+}
+test("failed deletion preserves confirmation and viewers cannot delete research", async ({
+  page,
+}) => {
+  await page.goto("/research.html?deleteFail=1");
+  await page.getByRole("button", { name: /^Delete research account / }).click();
+  const dialog = page.getByRole("dialog");
+  await dialog
+    .getByRole("button", { name: "Delete account and all research" })
+    .click();
+  await expect(dialog.getByRole("alert")).toContainText(
+    "This research account changed",
+  );
+  await expect(dialog).toBeVisible();
+  await expect(
+    dialog.getByRole("button", { name: "Delete account and all research" }),
+  ).toBeEnabled();
+  expect(
+    await page.evaluate(() =>
+      sessionStorage.getItem("research-router-refresh"),
+    ),
+  ).toBeNull();
+  await page.goto("/research.html?readonly=1");
+  await expect(
+    page.getByRole("button", { name: /^Delete research account / }),
+  ).toHaveCount(0);
+});
+
 test("owners can rediscover source accounts without another OAuth flow", async ({
   page,
 }) => {

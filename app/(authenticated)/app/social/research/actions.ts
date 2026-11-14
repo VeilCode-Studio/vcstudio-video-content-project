@@ -2,11 +2,15 @@
 
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
-import { researchAccountInputSchema } from "@studio/contracts/social-research";
+import {
+  researchAccountInputSchema,
+  deleteResearchAccountInputSchema,
+} from "@studio/contracts/social-research";
 import {
   addResearchAccount,
   archiveResearchAccount,
   disconnectResearchConnection,
+  deleteResearchAccount,
 } from "@/db/repositories/social-research.repository";
 import { getAuthenticatedWorkspaceContext } from "@/lib/auth/workspace-context";
 import { requireCapability } from "@/lib/policies/workspace-policy";
@@ -126,6 +130,40 @@ export async function disconnectResearchAction(): Promise<ResearchActionResult> 
       action: "platform_disconnected",
       targetType: "social_research_connection",
       metadata: { purpose: "research" },
+    });
+    revalidatePath("/app/social/research");
+    return { ok: true };
+  } catch (error) {
+    return failure(error);
+  }
+}
+
+export async function deleteResearchAccountAction(
+  input: unknown,
+): Promise<ResearchActionResult> {
+  const parsed = deleteResearchAccountInputSchema.safeParse(input);
+  if (!parsed.success)
+    return { ok: false, error: "That research account selection is invalid." };
+  try {
+    const auth = await context();
+    if (
+      !(await deleteResearchAccount({
+        workspaceId: auth.activeMembership.workspaceId,
+        ...parsed.data,
+      }))
+    )
+      return {
+        ok: false,
+        error:
+          "This research account changed or has already been removed. Refresh the page and review it before deleting.",
+      };
+    // Keep an anonymous security event, without the deleted account's ID/name/content.
+    await recordAuditEvent({
+      workspaceId: auth.activeMembership.workspaceId,
+      actorUserId: auth.user.id,
+      action: "platform_disconnected",
+      targetType: "social_research_account",
+      metadata: { operation: "permanent_delete" },
     });
     revalidatePath("/app/social/research");
     return { ok: true };
