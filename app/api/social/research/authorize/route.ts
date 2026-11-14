@@ -50,7 +50,10 @@ export async function GET() {
     return response;
   } catch {
     return NextResponse.redirect(
-      new URL(`${RESEARCH_PATH}?authorization=failed`, web.APP_BASE_URL),
+      new URL(
+        `${RESEARCH_PATH}?authorization=failed&failure=configuration`,
+        web.APP_BASE_URL,
+      ),
       { status: 307, headers },
     );
   }

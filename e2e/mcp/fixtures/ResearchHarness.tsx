@@ -2,6 +2,7 @@ import {
   ResearchWorkspace,
   type ResearchWorkspaceProps,
 } from "@/components/social/research/ResearchWorkspace";
+import { researchAuthorizationFailureSchema } from "@studio/contracts/social-research";
 
 export function ResearchHarness() {
   const query = new URLSearchParams(location.search);
@@ -79,7 +80,17 @@ export function ResearchHarness() {
     historyPage: 0,
     hasMoreAccounts: false,
     hasMoreSnapshots: false,
-    authorization: null,
+    authorization: query.has("authFailed")
+      ? "failed"
+      : query.has("authConnected")
+        ? "connected"
+        : null,
+    authorizationFailure:
+      researchAuthorizationFailureSchema.safeParse(query.get("failure")).data ??
+      null,
+    authorizationReference: query.has("authFailed")
+      ? "33333333-3333-4333-8333-333333333333"
+      : null,
   };
   props.selected = props.accounts[0]!;
   return <ResearchWorkspace {...props} />;

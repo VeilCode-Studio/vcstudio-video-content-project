@@ -37,11 +37,13 @@ import type {
   ResearchAccountView,
   ResearchConnectionView,
   ResearchSnapshotView,
+  ResearchAuthorizationFailure,
 } from "@studio/contracts/social-research";
 import { ResearchConnectionPanel } from "./ResearchConnectionPanel";
 import { ResearchAccountForm } from "./ResearchAccountForm";
 import { ResearchSnapshotPanel } from "./ResearchSnapshotPanel";
 import { researchDate } from "@/lib/social/research/view";
+import { ResearchAuthorizationFeedback } from "./ResearchAuthorizationFeedback";
 
 export type ResearchWorkspaceProps = {
   enabled: boolean;
@@ -57,6 +59,8 @@ export type ResearchWorkspaceProps = {
   hasMoreAccounts: boolean;
   hasMoreSnapshots: boolean;
   authorization: "connected" | "cancelled" | "failed" | "invalid" | null;
+  authorizationFailure?: ResearchAuthorizationFailure | null;
+  authorizationReference?: string | null;
 };
 
 export function ResearchWorkspace(props: ResearchWorkspaceProps) {
@@ -112,13 +116,12 @@ export function ResearchWorkspace(props: ResearchWorkspaceProps) {
         {props.enabled && props.canResearch ? <ResearchAccountForm /> : null}
       </header>
       {props.authorization ? (
-        <p role="status" className="rounded-xl border bg-muted/40 p-4 text-sm">
-          {props.authorization === "connected"
-            ? "Meta research authorization saved. Choose an account and refresh to test its actual access."
-            : props.authorization === "cancelled"
-              ? "Authorization was cancelled. Existing research access is unchanged."
-              : "Research authorization could not be completed. Check the registered callback, permissions and App Review status, then try again."}
-        </p>
+        <ResearchAuthorizationFeedback
+          status={props.authorization}
+          failure={props.authorizationFailure}
+          reference={props.authorizationReference}
+          canRetry={props.enabled && props.canManage}
+        />
       ) : null}
       {!props.enabled ? (
         <p

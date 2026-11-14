@@ -1,5 +1,59 @@
 import { expect, test } from "@playwright/test";
 
+for (const theme of ["light", "dark"]) {
+  test(`authorization failure has a visible recovery alert in ${theme}`, async ({
+    page,
+  }, testInfo) => {
+    await page.setViewportSize({ width: 390, height: 1000 });
+    await page.goto(
+      `/research.html?theme=${theme}&authFailed=1&failure=account_discovery&disconnected=1`,
+    );
+    const alert = page.getByRole("alert");
+    await expect(
+      alert.getByRole("heading", {
+        name: "Authorized accounts could not be loaded",
+      }),
+    ).toBeVisible();
+    await expect(alert.getByText(/Check Page access/)).toBeVisible();
+    await expect(alert.getByText(/Support reference:/)).toBeVisible();
+    await expect(
+      alert.getByRole("link", { name: "Try authorization again" }),
+    ).toHaveAttribute("href", "/api/social/research/authorize");
+    expect(
+      await alert.evaluate((el) => getComputedStyle(el).borderLeftWidth),
+    ).toBe("4px");
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
+    await page.screenshot({
+      path: testInfo.outputPath(`research-auth-error-${theme}.png`),
+      fullPage: true,
+    });
+  });
+}
+test("authorization success is distinct from errors and viewers cannot retry", async ({
+  page,
+}) => {
+  await page.goto("/research.html?authConnected=1");
+  await expect(
+    page
+      .getByRole("status")
+      .getByRole("heading", { name: "Research access authorized" }),
+  ).toBeVisible();
+  await expect(page.getByRole("alert")).toHaveCount(0);
+  await page.goto("/research.html?authFailed=1&readonly=1");
+  await expect(
+    page
+      .getByRole("alert")
+      .getByRole("heading", { name: "Research authorization failed" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: "Try authorization again" }),
+  ).toHaveCount(0);
+});
+
 for (const theme of ["light", "dark"])
   for (const width of [390, 768, 1440]) {
     test(`research is responsive and usable in ${theme} at ${width}px`, async ({

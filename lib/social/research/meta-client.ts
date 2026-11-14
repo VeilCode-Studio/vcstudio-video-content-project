@@ -65,20 +65,24 @@ export async function metaResearchRequest(input: {
         throw new SocialResearchError(
           "expired",
           "Meta research authorization has expired. Ask the workspace owner to reconnect research access.",
+          code,
         );
       if (response.status === 429 || [4, 17, 32, 613].includes(code ?? -1))
         throw new SocialResearchError(
           "rate_limit",
           "Meta has limited research requests. Keep the saved snapshot and try again later.",
+          code ?? undefined,
         );
       if ([10, 100, 200, 803].includes(code ?? -1) || response.status === 403)
         throw new SocialResearchError(
           "access",
           "Meta could not expose this account. Check its identifier, professional/Page status, granted permissions and public-content App Review access. Reconnecting cannot bypass Meta approval.",
+          code ?? undefined,
         );
       throw new SocialResearchError(
         "unavailable",
         "Meta research is temporarily unavailable. Your previous snapshot is preserved.",
+        code ?? undefined,
       );
     }
     return value;

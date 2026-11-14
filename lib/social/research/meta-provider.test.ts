@@ -195,6 +195,78 @@ describe("bounded official Meta research", () => {
   });
 });
 describe("read-only research OAuth", () => {
+  it.each([
+    "token_exchange",
+    "token_extension",
+    "permissions",
+    "account_discovery",
+  ] as const)(
+    "identifies %s failures without retaining raw provider data",
+    async (stage) => {
+      if (stage !== "token_exchange")
+        fetchMock.mockResolvedValueOnce(
+          json({ access_token: "private-short" }),
+        );
+      if (stage === "permissions" || stage === "account_discovery")
+        fetchMock.mockResolvedValueOnce(
+          json({ access_token: "private-long", expires_in: 3600 }),
+        );
+      if (stage === "account_discovery")
+        fetchMock.mockResolvedValueOnce(
+          json({
+            data: RESEARCH_SCOPES.map((permission) => ({
+              permission,
+              status: "granted",
+            })),
+          }),
+        );
+      fetchMock.mockResolvedValueOnce(
+        json(
+          {
+            error: {
+              code: 200,
+              message: "secret provider detail private-long",
+            },
+          },
+          403,
+        ),
+      );
+      try {
+        await exchangeResearchConsent({
+          code: "private-code",
+          appId: "app",
+          appSecret: "private-secret",
+          version: "v25.0",
+          baseUrl: "https://studio.test",
+        });
+        throw new Error("Expected authorization failure");
+      } catch (error) {
+        expect(error).toMatchObject({
+          stage,
+          providerCode: 200,
+          code: "access",
+        });
+        expect(JSON.stringify(error)).not.toContain("private-");
+      }
+    },
+  );
+  it("identifies token schema fields without keeping received secret values", async () => {
+    fetchMock
+      .mockResolvedValueOnce(json({ access_token: "private-short" }))
+      .mockResolvedValueOnce(json({ access_token: "private-long" }));
+    await expect(
+      exchangeResearchConsent({
+        code: "code",
+        appId: "app",
+        appSecret: "secret",
+        version: "v25.0",
+        baseUrl: "https://studio.test",
+      }),
+    ).rejects.toMatchObject({
+      stage: "token_extension",
+      validationFields: ["expires_in"],
+    });
+  });
   it("requests research scopes without any publishing permissions", () => {
     const url = new URL(
       createResearchAuthorizationUrl({
@@ -233,7 +305,14 @@ describe("read-only research OAuth", () => {
           paging: { cursors: { after: "next" }, next: "https://evil.invalid" },
         }),
       )
-      .mockResolvedValueOnce(json({ data: [] }));
+      .mockResolvedValueOnce(
+        json({
+          data: [
+            { instagram_business_account: { id: "43", username: "second" } },
+            { instagram_business_account: { id: "44", username: "third" } },
+          ],
+        }),
+      );
     const result = await exchangeResearchConsent({
       code: "code",
       appId: "app",
@@ -241,7 +320,11 @@ describe("read-only research OAuth", () => {
       version: "v25.0",
       baseUrl: "https://studio.test",
     });
-    expect(result.sources).toEqual([{ id: "42", username: "studio" }]);
+    expect(result.sources).toEqual([
+      { id: "42", username: "studio" },
+      { id: "43", username: "second" },
+      { id: "44", username: "third" },
+    ]);
     expect(result.token).toBe("long");
     expect(fetchMock).toHaveBeenCalledTimes(5);
     expect(String(fetchMock.mock.calls[4]?.[0])).toContain(

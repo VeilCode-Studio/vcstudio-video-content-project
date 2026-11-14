@@ -47,6 +47,13 @@ export function ResearchConnectionPanel({
         Meta decides which public accounts and fields are accessible; connecting
         does not grant unrestricted competitor access.
       </p>
+      <p className="text-sm text-muted-foreground">
+        The Instagram accounts in Meta’s picker are your research sources, not
+        the competitors you can track. One eligible source can research multiple
+        professional accounts added to your watchlist. To expose another source,
+        check that it is a Business or Creator account linked to a Facebook Page
+        you can manage, then review Meta’s account selection when reconnecting.
+      </p>
       {connection.connected && connection.expiresAt ? (
         <p className="text-xs text-muted-foreground">
           Authorization expires {researchDate(connection.expiresAt)}.{" "}

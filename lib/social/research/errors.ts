@@ -8,6 +8,7 @@ export class SocialResearchError extends Error {
       | "conflict"
       | "configuration",
     message: string,
+    public readonly providerCode?: number,
   ) {
     super(message);
     this.name = "SocialResearchError";

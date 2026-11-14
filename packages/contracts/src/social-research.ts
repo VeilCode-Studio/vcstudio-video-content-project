@@ -1,5 +1,20 @@
 import { z } from "zod";
 
+export const researchAuthorizationFailureSchema = z.enum([
+  "configuration",
+  "consent",
+  "token_exchange",
+  "token_extension",
+  "permissions",
+  "account_discovery",
+  "save_connection",
+  "audit",
+  "session",
+]);
+export type ResearchAuthorizationFailure = z.infer<
+  typeof researchAuthorizationFailureSchema
+>;
+
 export const researchPlatformSchema = z.enum(["facebook", "instagram"]);
 export type ResearchPlatform = z.infer<typeof researchPlatformSchema>;
 

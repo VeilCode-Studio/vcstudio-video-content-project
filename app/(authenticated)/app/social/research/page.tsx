@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import { researchAuthorizationFailureSchema } from "@studio/contracts/social-research";
 import { ResearchWorkspace } from "@/components/social/research/ResearchWorkspace";
 import { getAuthenticatedWorkspaceContext } from "@/lib/auth/workspace-context";
 import { can } from "@/lib/policies/workspace-policy";
@@ -21,6 +22,8 @@ const querySchema = z.object({
   observation: z.uuid().optional().catch(undefined),
   page: z.coerce.number().int().min(0).max(1000).catch(0).default(0),
   historyPage: z.coerce.number().int().min(0).max(1000).catch(0).default(0),
+  failure: researchAuthorizationFailureSchema.optional().catch(undefined),
+  reference: z.uuid().optional().catch(undefined),
   authorization: z
     .enum(["connected", "cancelled", "failed", "invalid"])
     .optional()
@@ -71,6 +74,8 @@ export default async function SocialResearchPage({
       hasMoreAccounts={rows.length > 20}
       hasMoreSnapshots={snapshots.length > 10}
       authorization={query.authorization ?? null}
+      authorizationFailure={query.failure ?? null}
+      authorizationReference={query.reference ?? null}
     />
   );
 }

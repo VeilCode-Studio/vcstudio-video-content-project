@@ -3,6 +3,8 @@ import { z } from "zod";
 import { researchSourcesSchema } from "@studio/contracts/social-research";
 import { metaResearchRequest } from "./meta-client";
 import { SocialResearchError } from "./errors";
+import { ResearchAuthorizationError } from "./authorization-error";
+import type { ResearchAuthorizationFailure } from "@studio/contracts/social-research";
 
 export const RESEARCH_OAUTH_COOKIE = "vcstudio_research_oauth";
 export const RESEARCH_OAUTH_PATH = "/api/social/research";
@@ -70,86 +72,94 @@ export async function exchangeResearchConsent(input: {
   version: string;
   baseUrl: string;
 }) {
-  // Meta documents GET for token exchange; URL values stay server-side and must never be logged.
-  const short = z.object({ access_token: z.string().min(1) }).parse(
-    await metaResearchRequest({
-      version: input.version,
-      path: "oauth/access_token",
-      query: {
-        client_id: input.appId,
-        client_secret: input.appSecret,
-        redirect_uri: `${input.baseUrl}/api/social/research/callback`,
-        code: input.code,
-      },
-    }),
-  );
-  const token = tokenSchema.parse(
-    await metaResearchRequest({
-      version: input.version,
-      path: "oauth/access_token",
-      query: {
-        grant_type: "fb_exchange_token",
-        client_id: input.appId,
-        client_secret: input.appSecret,
-        fb_exchange_token: short.access_token,
-      },
-    }),
-  );
-  const permissions = permissionsSchema.parse(
-    await metaResearchRequest({
-      version: input.version,
-      path: "me/permissions",
-      token: token.access_token,
-    }),
-  );
-  const scopes = permissions.data
-    .filter(
-      (permission) =>
-        permission.status === "granted" &&
-        RESEARCH_SCOPES.some((scope) => scope === permission.permission),
-    )
-    .map((permission) => permission.permission);
-  if (!scopes.includes("pages_read_engagement"))
-    throw new SocialResearchError(
-      "access",
-      "Meta research permissions were not granted.",
+  let stage: ResearchAuthorizationFailure = "token_exchange";
+  try {
+    // Meta documents GET for token exchange; URL values stay server-side and must never be logged.
+    const short = z.object({ access_token: z.string().min(1) }).parse(
+      await metaResearchRequest({
+        version: input.version,
+        path: "oauth/access_token",
+        query: {
+          client_id: input.appId,
+          client_secret: input.appSecret,
+          redirect_uri: `${input.baseUrl}/api/social/research/callback`,
+          code: input.code,
+        },
+      }),
     );
-  const sources = new Map<string, { id: string; username: string }>();
-  // Discovery is explicitly bounded; reconnect after narrowing Meta's Page selection if more than 50 apply.
-  if (
-    scopes.includes("instagram_basic") &&
-    scopes.includes("pages_show_list")
-  ) {
-    let after: string | undefined;
-    for (let index = 0; index < 2; index++) {
-      const result = pagesSchema.parse(
-        await metaResearchRequest({
-          version: input.version,
-          path: "me/accounts",
-          token: token.access_token,
-          query: {
-            fields: "instagram_business_account{id,username}",
-            limit: "25",
-            ...(after ? { after } : {}),
-          },
-        }),
+    stage = "token_extension";
+    const token = tokenSchema.parse(
+      await metaResearchRequest({
+        version: input.version,
+        path: "oauth/access_token",
+        query: {
+          grant_type: "fb_exchange_token",
+          client_id: input.appId,
+          client_secret: input.appSecret,
+          fb_exchange_token: short.access_token,
+        },
+      }),
+    );
+    stage = "permissions";
+    const permissions = permissionsSchema.parse(
+      await metaResearchRequest({
+        version: input.version,
+        path: "me/permissions",
+        token: token.access_token,
+      }),
+    );
+    const scopes = permissions.data
+      .filter(
+        (permission) =>
+          permission.status === "granted" &&
+          RESEARCH_SCOPES.some((scope) => scope === permission.permission),
+      )
+      .map((permission) => permission.permission);
+    if (!scopes.includes("pages_read_engagement"))
+      throw new SocialResearchError(
+        "access",
+        "Meta research permissions were not granted.",
       );
-      for (const page of result.data) {
-        const account = page.instagram_business_account;
-        if (account)
-          sources.set(account.id, {
-            id: account.id,
-            username: account.username ?? account.id,
-          });
+    stage = "account_discovery";
+    const sources = new Map<string, { id: string; username: string }>();
+    // Discovery is explicitly bounded; reconnect after narrowing Meta's Page selection if more than 50 apply.
+    if (
+      scopes.includes("instagram_basic") &&
+      scopes.includes("pages_show_list")
+    ) {
+      let after: string | undefined;
+      for (let index = 0; index < 2; index++) {
+        const result = pagesSchema.parse(
+          await metaResearchRequest({
+            version: input.version,
+            path: "me/accounts",
+            token: token.access_token,
+            query: {
+              fields: "instagram_business_account{id,username}",
+              limit: "25",
+              ...(after ? { after } : {}),
+            },
+          }),
+        );
+        for (const page of result.data) {
+          const account = page.instagram_business_account;
+          if (account)
+            sources.set(account.id, {
+              id: account.id,
+              username: account.username ?? account.id,
+            });
+        }
+        after = result.paging?.cursors?.after;
+        if (!result.paging?.next || !after) break;
       }
-      after = result.paging?.cursors?.after;
-      if (!result.paging?.next || !after) break;
     }
+    return {
+      token: token.access_token,
+      expiresAt: new Date(Date.now() + token.expires_in * 1000),
+      scopes,
+      sources: researchSourcesSchema.parse([...sources.values()]),
+    };
+  } catch (error) {
+    throw new ResearchAuthorizationError(stage, error);
   }
-  return {
-    token: token.access_token,
-    expiresAt: new Date(Date.now() + token.expires_in * 1000),
-    scopes,
-    sources: researchSourcesSchema.parse([...sources.values()]),
-  };
 }

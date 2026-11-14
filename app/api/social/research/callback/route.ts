@@ -1,4 +1,8 @@
 import { cookies } from "next/headers";
+import { randomUUID } from "node:crypto";
+import type { ResearchAuthorizationFailure } from "@studio/contracts/social-research";
+import { ResearchAuthorizationError } from "@/lib/social/research/authorization-error";
+import { SocialResearchError } from "@/lib/social/research/errors";
 import { NextResponse } from "next/server";
 import { getAuthenticatedWorkspaceContext } from "@/lib/auth/workspace-context";
 import { can } from "@/lib/policies/workspace-policy";
@@ -29,11 +33,17 @@ export async function GET(request: Request) {
   if (!isSocialResearchEnabled())
     return new NextResponse(null, { status: 404, headers });
   const web = getPublishingWebEnvironment();
-  function finish(status: "connected" | "failed" | "cancelled" | "invalid") {
-    const response = NextResponse.redirect(
-      new URL(`${RESEARCH_PATH}?authorization=${status}`, web.APP_BASE_URL),
-      { status: 307, headers },
-    );
+  let stage: ResearchAuthorizationFailure = "session";
+  function finish(
+    status: "connected" | "failed" | "cancelled" | "invalid",
+    failure?: ResearchAuthorizationFailure,
+    reference?: string,
+  ) {
+    const target = new URL(RESEARCH_PATH, web.APP_BASE_URL);
+    target.searchParams.set("authorization", status);
+    if (failure) target.searchParams.set("failure", failure);
+    if (reference) target.searchParams.set("reference", reference);
+    const response = NextResponse.redirect(target, { status: 307, headers });
     response.cookies.set(RESEARCH_OAUTH_COOKIE, "", {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
@@ -63,7 +73,10 @@ export async function GET(request: Request) {
       payload.userId !== context.user.id
     )
       return finish("invalid");
-    if (query.has("error")) return finish("cancelled");
+    if (query.has("error"))
+      return query.get("error") === "access_denied"
+        ? finish("cancelled")
+        : finish("failed", "consent");
     const code = query.get("code");
     if (!code || code.length > 4000) return finish("invalid");
     // Consume the browser nonce before exchange; reloads/replayed callbacks cannot save another grant.
@@ -71,7 +84,9 @@ export async function GET(request: Request) {
       path: RESEARCH_OAUTH_PATH,
       maxAge: 0,
     });
+    stage = "configuration";
     const environment = getPublishingEnvironment();
+    stage = "token_exchange";
     const consent = await exchangeResearchConsent({
       code,
       appId: web.FACEBOOK_APP_ID,
@@ -79,6 +94,7 @@ export async function GET(request: Request) {
       version: environment.FACEBOOK_GRAPH_API_VERSION,
       baseUrl: web.APP_BASE_URL,
     });
+    stage = "save_connection";
     await saveResearchConnection({
       workspaceId: context.activeMembership.workspaceId,
       connectedByUserId: context.user.id,
@@ -91,6 +107,7 @@ export async function GET(request: Request) {
       scopes: consent.scopes,
       sources: consent.sources,
     });
+    stage = "audit";
     await recordAuditEvent({
       workspaceId: context.activeMembership.workspaceId,
       actorUserId: context.user.id,
@@ -100,6 +117,29 @@ export async function GET(request: Request) {
     });
     return finish("connected");
   } catch (error) {
-    return finish(error instanceof OAuthStateError ? "invalid" : "failed");
+    const failure =
+      error instanceof OAuthStateError
+        ? "session"
+        : error instanceof ResearchAuthorizationError
+          ? error.stage
+          : stage;
+    const reference = randomUUID();
+    // Never log the error object, message, callback URL, code, nonce or tokens.
+    console.error("SOCIAL_RESEARCH_AUTHORIZATION_FAILED", {
+      reference,
+      stage: failure,
+      category: error instanceof SocialResearchError ? error.code : "internal",
+      providerCode:
+        error instanceof SocialResearchError ? error.providerCode : undefined,
+      validationFields:
+        error instanceof ResearchAuthorizationError
+          ? error.validationFields
+          : [],
+    });
+    return finish(
+      error instanceof OAuthStateError ? "invalid" : "failed",
+      failure,
+      reference,
+    );
   }
 }

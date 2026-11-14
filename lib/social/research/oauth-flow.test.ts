@@ -1,4 +1,6 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { ResearchAuthorizationError } from "./authorization-error";
+import { SocialResearchError } from "./errors";
 vi.mock("server-only", () => ({}));
 const mocks = vi.hoisted(() => ({
   context: vi.fn(),
@@ -77,6 +79,7 @@ beforeEach(() => {
     sources: [],
   });
 });
+afterEach(() => vi.restoreAllMocks());
 describe("research OAuth route isolation", () => {
   it("sets a secure-purpose HttpOnly cookie and a separate callback", async () => {
     const result = await authorize();
@@ -141,5 +144,66 @@ describe("research OAuth route isolation", () => {
     );
     expect(result.headers.get("location")).not.toContain("secret-access");
     expect(mocks.set).toHaveBeenCalled();
+  });
+  it("reports the exact failed stage and logs only allowlisted diagnostics", async () => {
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    const signed = state();
+    mocks.get.mockReturnValue({ value: signed });
+    mocks.exchange.mockRejectedValueOnce(
+      new ResearchAuthorizationError(
+        "account_discovery",
+        new SocialResearchError(
+          "access",
+          "secret-access provider URL with secret",
+          200,
+        ),
+      ),
+    );
+    const response = await callback(request(signed));
+    const url = new URL(response.headers.get("location")!);
+    expect(url.searchParams.get("failure")).toBe("account_discovery");
+    expect(url.searchParams.get("reference")).toMatch(/^[a-f0-9-]{36}$/);
+    expect(log).toHaveBeenCalledWith("SOCIAL_RESEARCH_AUTHORIZATION_FAILED", {
+      reference: url.searchParams.get("reference"),
+      stage: "account_discovery",
+      category: "access",
+      providerCode: 200,
+      validationFields: [],
+    });
+    expect(JSON.stringify(log.mock.calls)).not.toContain("secret");
+    expect(url.toString()).not.toContain("secret");
+    expect(mocks.save).not.toHaveBeenCalled();
+  });
+  it("distinguishes saving failures from Meta consent failures", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const signed = state();
+    mocks.get.mockReturnValue({ value: signed });
+    mocks.save.mockRejectedValueOnce(new Error("private database URL"));
+    expect((await callback(request(signed))).headers.get("location")).toContain(
+      "failure=save_connection",
+    );
+  });
+  it("distinguishes declined consent from a provider authorization error", async () => {
+    const signed = state();
+    mocks.get.mockReturnValue({ value: signed });
+    expect(
+      (
+        await callback(
+          new Request(
+            `https://studio.test/api/social/research/callback?state=${signed}&error=access_denied`,
+          ),
+        )
+      ).headers.get("location"),
+    ).toContain("authorization=cancelled");
+    expect(
+      (
+        await callback(
+          new Request(
+            `https://studio.test/api/social/research/callback?state=${signed}&error=server_error&error_description=secret`,
+          ),
+        )
+      ).headers.get("location"),
+    ).toContain("failure=consent");
+    expect(mocks.exchange).not.toHaveBeenCalled();
   });
 });
