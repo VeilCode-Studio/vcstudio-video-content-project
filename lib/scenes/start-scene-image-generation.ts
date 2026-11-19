@@ -462,7 +462,7 @@ export async function startSceneImageGeneration(input: {
       },
       estimatedCostCents: estimate.estimatedCostCents,
     });
-    if (budgetConstraint) {
+    if (budgetConstraint && !input.mcpOperationId) {
       budgetConstraintReached = budgetConstraint;
       skippedSizes.push(size);
       continue;

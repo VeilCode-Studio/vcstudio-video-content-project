@@ -28,8 +28,8 @@ export async function reserveMcpGeneration(
     .parse(rows[1])[0];
   if (!result?.id)
     throw new McpError(
-      "budget_exceeded",
-      "Generation could not reserve its cost. Check workspace budgets, active generations and the request's maximum cost.",
+      "capacity_unavailable",
+      "The operation could not acquire a processing slot. Check its expiry and active operations; at most four operations of this kind may be pending. Budget warnings do not block authorized MCP work.",
     );
   return result.id;
 }

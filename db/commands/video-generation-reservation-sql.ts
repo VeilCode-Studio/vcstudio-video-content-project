@@ -1,3 +1,4 @@
+import { mcpAdvisoryBudgetSql } from "./mcp-advisory-budget-sql";
 import { sql } from "drizzle-orm";
 import type {
   VideoGenerationRequest,
@@ -32,6 +33,12 @@ export type ReserveVideoInput = {
  * READ COMMITTED then observes work committed while waiting for the lock. */
 export function buildVideoReservationSql(input: ReserveVideoInput) {
   const target = input.request.target;
+  const advisory = mcpAdvisoryBudgetSql({
+    workspaceId: input.workspaceId,
+    operationId: input.mcpOperationId,
+    userId: input.userId,
+    projectId: target.kind === "scene" ? target.projectId : null,
+  });
   const projectId = target.kind === "scene" ? target.projectId : null;
   const sceneId = target.kind === "scene" ? target.sceneId : null;
   const sceneVersionId = target.kind === "scene" ? target.sceneVersionId : null;
@@ -49,11 +56,11 @@ export function buildVideoReservationSql(input: ReserveVideoInput) {
   ), eligibility as materialized (
     select case
       when exists(select 1 from video_generations where quote_id=${input.quoteId}::uuid) then 'quote_used'
-      when ${input.estimatedCostCents}::int>${input.maximumCostCents}::int then 'operation_budget'
-      when t.daily+${input.estimatedCostCents}>${input.dailyBudgetCents} then 'workspace_daily_budget'
-      when t.monthly+${input.estimatedCostCents}>${input.monthlyBudgetCents} then 'workspace_monthly_budget'
-      when t.video_daily+${input.estimatedCostCents}>${input.videoDailyBudgetCents} then 'video_daily_budget'
-      when t.video_lifetime+${input.estimatedCostCents}>${input.videoLifetimeBudgetCents} then 'video_lifetime_budget'
+      when not (${advisory}) and ${input.estimatedCostCents}::int>${input.maximumCostCents}::int then 'operation_budget'
+      when not (${advisory}) and t.daily+${input.estimatedCostCents}>${input.dailyBudgetCents} then 'workspace_daily_budget'
+      when not (${advisory}) and t.monthly+${input.estimatedCostCents}>${input.monthlyBudgetCents} then 'workspace_monthly_budget'
+      when not (${advisory}) and t.video_daily+${input.estimatedCostCents}>${input.videoDailyBudgetCents} then 'video_daily_budget'
+      when not (${advisory}) and t.video_lifetime+${input.estimatedCostCents}>${input.videoLifetimeBudgetCents} then 'video_lifetime_budget'
       when (select count(*) from video_generations where status in ('queued','submitting','running','inspecting'))>=2 then 'concurrency_limit'
       when exists(select 1 from video_generations where workspace_id=${input.workspaceId}::uuid and request_fingerprint=${input.fingerprint} and status='requires_reconciliation') then 'unresolved_request'
       when ${projectId}::uuid is not null and not exists(
@@ -61,7 +68,7 @@ export function buildVideoReservationSql(input: ReserveVideoInput) {
         join scene_versions sv on sv.version_number=s.current_version and sv.scene_id=s.id and sv.project_id=p.id and sv.workspace_id=p.workspace_id
         where p.workspace_id=${input.workspaceId}::uuid and p.id=${projectId}::uuid and p.archived_at is null
         and s.id=${sceneId}::uuid and sv.id=${sceneVersionId}::uuid and sv.version_number=${target.kind === "scene" ? target.expectedSceneVersion : 0}
-        and t.project+${input.estimatedCostCents}<=p.maximum_budget_cents
+        and (${advisory} or t.project+${input.estimatedCostCents}<=p.maximum_budget_cents)
       ) then 'project_budget_or_revision'
       else 'allowed' end as reason from totals t
   ), inserted as (

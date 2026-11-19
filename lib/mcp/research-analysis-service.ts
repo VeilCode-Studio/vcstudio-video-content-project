@@ -1,3 +1,4 @@
+import { loadMcpBudgetNotice } from "./budget-notice";
 import "server-only";
 import { tasks } from "@trigger.dev/sdk";
 import {
@@ -36,7 +37,7 @@ import { isSocialResearchEnabled } from "@/lib/social/research/environment";
 import { authorizeMcp, authorizeMcpBrowser, type McpContext } from "./context";
 import { requireResearchEditor, researchApprovalMode } from "./research-policy";
 import { fingerprint } from "./fingerprint";
-import { requireMcp } from "./errors";
+import { McpError, requireMcp } from "./errors";
 import { publicOperation } from "./operations";
 import { recordAuditEvent } from "@/lib/audit/record-audit-event";
 import { reconcileResearchAnalysis } from "./research-analysis-recovery";
@@ -145,13 +146,13 @@ export async function prepareResearchAnalysis(
     RESEARCH_MAX_INPUT_TOKENS,
     RESEARCH_MAX_OUTPUT_TOKENS,
   );
-  requireMcp(
-    estimatedCostCents <= request.maximumCostCents,
-    "budget_exceeded",
-    `The conservative analysis estimate is ${estimatedCostCents} cents; it exceeds your authorized maximum.`,
-  );
   const expiresAt = new Date(Date.now() + 600000);
   const preview = researchAnalysisPreviewSchema.parse({
+    budget: await loadMcpBudgetNotice({
+      workspaceId: ctx.workspaceId,
+      estimatedCostCents,
+      maximumCostCents: request.maximumCostCents,
+    }),
     accountName: source.account.name,
     postUrl: source.post.url,
     caption: source.post.text,
@@ -179,6 +180,7 @@ export async function prepareResearchAnalysis(
     expiresAt,
     input: {
       accountId: source.account.id,
+      budgetPolicy: "advisory",
       request,
       preview,
       authority: researchAuthority(ctx),
@@ -254,15 +256,27 @@ export async function dispatchResearchAnalysis(
   const budget = await loadEffectiveWorkspaceBudget({
     workspaceId: ctx.workspaceId,
   });
-  await reserveMcpGeneration({
-    workspaceId: ctx.workspaceId,
-    operationId: op.id,
-    estimatedCostCents: preview.estimatedCostCents,
-    maximumCostCents: preview.maximumCostCents,
-    dailyBudgetCents: budget.dailyBudgetCents,
-    monthlyBudgetCents: budget.monthlyBudgetCents,
-    kind: "research_analysis",
-  });
+  try {
+    await reserveMcpGeneration({
+      workspaceId: ctx.workspaceId,
+      operationId: op.id,
+      estimatedCostCents: preview.estimatedCostCents,
+      maximumCostCents: preview.maximumCostCents,
+      dailyBudgetCents: budget.dailyBudgetCents,
+      monthlyBudgetCents: budget.monthlyBudgetCents,
+      kind: "research_analysis",
+    });
+  } catch (error) {
+    if (!(error instanceof McpError) || error.code !== "capacity_unavailable")
+      throw error;
+    const waiting = await updateMcpOperation({
+      workspaceId: ctx.workspaceId,
+      operationId: op.id,
+      from: ["approved"],
+      values: { error: error.message },
+    });
+    return publicOperation(waiting ?? op);
+  }
   try {
     const handle = await tasks.trigger(
       "mcp-research-analysis",
@@ -321,6 +335,14 @@ async function start(
     "conflict",
     "Use the same idempotency key as preparation.",
   );
+  if (op.status === "approved") {
+    requireMcp(
+      op.expiresAt > new Date(),
+      "expired",
+      "This analysis quote expired. Prepare a fresh request.",
+    );
+    return dispatchResearchAnalysis(ctx, op);
+  }
   if (!["requires_approval", "prepared"].includes(op.status))
     return publicOperation(op);
   requireMcp(
@@ -374,7 +396,7 @@ async function start(
       values: {
         status: "failed",
         error:
-          "Analysis could not reserve its cost. Check Usage & budgets before preparing again.",
+          "Analysis could not acquire a processing slot. Inspect this operation and active work before retrying.",
       },
     });
     await settleMcpGeneration(ctx.workspaceId, id, 0);

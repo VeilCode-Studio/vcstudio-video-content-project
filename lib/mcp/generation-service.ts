@@ -1,3 +1,4 @@
+import { loadMcpBudgetNotice } from "./budget-notice";
 import { buildMcpVideoPlan } from "./video-generation";
 import {
   planAuthorizedVideoRequest,
@@ -307,12 +308,20 @@ export async function prepareMcpGeneration(
   }
   const operationId = crypto.randomUUID();
   const plan = await buildGenerationPlan(ctx, request, operationId);
-  requireMcp(
-    plan.estimatedCostCents <= request.maximumCostCents,
-    "budget_exceeded",
-    "This estimate exceeds the maximum cost you authorized. Choose cheaper settings or explicitly raise the limit.",
-  );
-  const preview = previewFor(request, plan);
+  const preview = {
+    ...previewFor(request, plan),
+    budget: await loadMcpBudgetNotice({
+      workspaceId: ctx.workspaceId,
+      projectId:
+        "projectId" in request
+          ? request.projectId
+          : request.kind === "video" && request.video.target.kind === "scene"
+            ? request.video.target.projectId
+            : undefined,
+      estimatedCostCents: plan.estimatedCostCents,
+      maximumCostCents: request.maximumCostCents,
+    }),
+  };
   const approvalMode = effectiveGenerationApprovalMode({
     ...ctx.grant,
     role: ctx.membership.role,
@@ -333,6 +342,7 @@ export async function prepareMcpGeneration(
     input: {
       request,
       preview,
+      budgetPolicy: "advisory",
       plan,
       planHash: fingerprint(plan),
       authority: generationAuthority(ctx),
@@ -462,16 +472,20 @@ export async function dispatchMcpGeneration(op: McpOperation) {
       error instanceof SceneImageGenerationRequestError ||
       error instanceof SceneAudioGenerationRequestError;
     const jobs = await listMcpGenerationJobs(op.workspaceId, op.id);
-    const failed = known && jobs.length === 0;
+    const capacity =
+      error instanceof McpError && error.code === "capacity_unavailable";
+    const failed = known && !capacity && jobs.length === 0;
     const updated = await updateMcpOperation({
       workspaceId: op.workspaceId,
       operationId: op.id,
       from: ["approved", "queued"],
       values: {
         ...(failed ? { status: "failed" as const } : {}),
-        error: failed
+        error: capacity
           ? error.message
-          : "The queue handoff could not be confirmed. Inspect this operation; autonomous clients may retry execute_generation with the SAME operation ID and idempotency key. Do not prepare a duplicate generation. Recovery can resume the saved handoff.",
+          : failed
+            ? error.message
+            : "The queue handoff could not be confirmed. Inspect this operation; autonomous clients may retry execute_generation with the SAME operation ID and idempotency key. Do not prepare a duplicate generation. Recovery can resume the saved handoff.",
       },
     });
     if (failed && updated) await settleMcpGeneration(op.workspaceId, op.id, 0);
@@ -514,6 +528,7 @@ async function dispatchGeneration(op: McpOperation) {
     const planned = await planAuthorizedVideoRequest(
       { workspaceId: ctx.workspaceId, userId: op.userId },
       request.video,
+      "advisory",
     );
     const quote = createVideoQuote(planned.quoteContext);
     const job = await startAuthorizedVideoGeneration(

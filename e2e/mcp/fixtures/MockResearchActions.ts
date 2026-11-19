@@ -84,3 +84,40 @@ export async function loadResearchPreviewsAction(input: unknown) {
     },
   };
 }
+
+export async function loadResearchSelectionAction(
+  input: unknown,
+): Promise<
+  import("@studio/contracts/social-research").ResearchSelectionResult
+> {
+  const parsed = (
+    await import("@studio/contracts/social-research")
+  ).researchSelectionInputSchema.parse(input);
+  const second = parsed.accountId.startsWith("5555");
+  await new Promise((resolve) => setTimeout(resolve, second ? 600 : 100));
+  if (new URLSearchParams(location.search).has("selectionFail"))
+    return {
+      ok: false,
+      error:
+        "Account observations could not load. Select the account again to retry.",
+    };
+  return {
+    ok: true,
+    data: {
+      selected: {
+        id: parsed.accountId,
+        platform: "instagram",
+        identifier: second ? "second.studio" : "example.studio",
+        name: second ? "Second research account" : "First research account",
+        notes: "",
+        version: 1,
+        refreshedAt: null,
+        lastError: null,
+      },
+      snapshots: [],
+      historyPage: parsed.historyPage,
+      hasMoreSnapshots: false,
+      observationId: parsed.observationId ?? null,
+    },
+  };
+}

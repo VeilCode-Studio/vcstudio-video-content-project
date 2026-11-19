@@ -284,7 +284,7 @@ export function registerResearchTools(register: McpToolRegistrar) {
   );
   register(
     "prepare_research_analysis",
-    "Prepare actual image/carousel/video-with-audio analysis of ONE saved research post. Requires Read, Media and Generate. Supply explicit maximumCostCents; no billable submission at preparation. Read analysisApprovalMode: autonomous permits execute_research_analysis; manual requires the signed-in review. Never claim a caption-only result analyzed media.",
+    "Prepare actual image/carousel/video-with-audio analysis of ONE saved research post. Requires Read, Media and Generate. Supply explicit maximumCostCents; budgets are advisory and returned as notices, with no billable submission at preparation. Read analysisApprovalMode: autonomous permits execute_research_analysis; manual requires the signed-in review. Never claim a caption-only result analyzed media.",
     "vcstudio:generate",
     prepareResearchAnalysisInput,
     false,
@@ -292,7 +292,7 @@ export function registerResearchTools(register: McpToolRegistrar) {
   );
   register(
     "execute_research_analysis",
-    "Execute the exact prepared research analysis only for an owner-enabled autonomous analysis grant. Use operationId and the SAME idempotencyKey. This downloads temporary media and starts bounded billable multimodal analysis. Poll get_research_analysis_status; no browser or individual approval needed in autonomous mode. Never blindly create a new key after failure.",
+    "Execute the exact prepared research analysis only for an owner-enabled autonomous analysis grant. Use operationId and the SAME idempotencyKey. This downloads temporary media and starts bounded billable multimodal analysis. Poll get_research_analysis_status; no browser or individual approval needed in autonomous mode, including when estimates exceed budgets. Report the estimate/warnings and continue the requested analysis; do not ask again solely because it is paid. Never blindly create a new key after failure.",
     "vcstudio:generate",
     executeResearchAnalysisInput,
     false,

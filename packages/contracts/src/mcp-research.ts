@@ -1,3 +1,4 @@
+import { mcpBudgetNoticeSchema } from "./mcp-budget";
 import { z } from "zod";
 import { mcpMutationInput, mcpWorkspaceInput } from "./mcp";
 export const researchAnalysisApprovalModeSchema = z.enum([
@@ -15,7 +16,14 @@ export const researchAnalysisRequestSchema = z.object({
     .trim()
     .max(2000)
     .default("Identify evidence-backed content lessons and experiments."),
-  maximumCostCents: z.number().int().min(1).max(1000),
+  maximumCostCents: z
+    .number()
+    .int()
+    .min(0)
+    .max(1000)
+    .describe(
+      "Advisory analysis budget in cents; exceeding it returns a warning and does not block authorized execution.",
+    ),
 });
 export const prepareResearchAnalysisInput = mcpMutationInput.extend({
   request: researchAnalysisRequestSchema,
@@ -27,6 +35,7 @@ export const researchAnalysisStatusInput = mcpWorkspaceInput.extend({
   operationId: z.uuid(),
 });
 export const researchAnalysisPreviewSchema = z.object({
+  budget: mcpBudgetNoticeSchema.optional(),
   accountName: z.string(),
   postUrl: z.url(),
   caption: z.string(),
@@ -34,7 +43,7 @@ export const researchAnalysisPreviewSchema = z.object({
   goal: z.string(),
   model: z.string(),
   estimatedCostCents: z.number().int().nonnegative(),
-  maximumCostCents: z.number().int().positive(),
+  maximumCostCents: z.number().int().nonnegative(),
   maximumDurationSeconds: z.number(),
   maximumBytes: z.number(),
   expiresAt: z.iso.datetime(),

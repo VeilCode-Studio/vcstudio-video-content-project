@@ -1,3 +1,19 @@
+vi.mock("./budget-notice", () => ({
+  loadMcpBudgetNotice: async (input: {
+    estimatedCostCents: number;
+    maximumCostCents: number;
+  }) => ({
+    policy: "advisory",
+    estimatedCostCents: input.estimatedCostCents,
+    requestedMaximumCostCents: input.maximumCostCents,
+    warnings:
+      input.estimatedCostCents > input.maximumCostCents
+        ? ["Budget exceeded; advisory only."]
+        : [],
+    execution:
+      "Follow the connection's approval mode. Cost and budget warnings do not require extra approval for an autonomous connection.",
+  }),
+}));
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 vi.mock("server-only", () => ({}));
 const m = vi.hoisted(() => ({
@@ -170,13 +186,19 @@ describe("quoted research analysis", () => {
     expect((await approveResearchAnalysis(ctx, op.id)).status).toBe("queued");
     expect(m.consume).toHaveBeenCalledWith(ctx, op.id, true);
   });
-  it("rejects a low maximum, wrong key, stale permissions, expiry and missing source before dispatch", async () => {
-    await expect(
-      prepareResearchAnalysis(ctx, "low-budget", {
-        ...request,
-        maximumCostCents: 1,
-      }),
-    ).rejects.toMatchObject({ code: "budget_exceeded" });
+  it("warns on a low budget but rejects wrong keys, stale permissions, expiry and missing sources", async () => {
+    const low = await prepareResearchAnalysis(ctx, "low-budget", {
+      ...request,
+      maximumCostCents: 0,
+    });
+    expect(low.operation.status).toBe("prepared");
+    expect(low.preview).toMatchObject({
+      budget: {
+        policy: "advisory",
+        warnings: ["Budget exceeded; advisory only."],
+      },
+    });
+    expect(op.input.budgetPolicy).toBe("advisory");
     await prepareResearchAnalysis(ctx, "research-key-3", request);
     await expect(
       executeResearchAnalysis(ctx, op.id, "different-key"),
@@ -209,6 +231,21 @@ describe("quoted research analysis", () => {
     await expect(
       executeResearchAnalysis(ctx, op.id, "research-key-4"),
     ).rejects.toThrow("revoked");
+  });
+  it("preserves exact approval when processing slots are full and resumes without another approval", async () => {
+    await prepareResearchAnalysis(ctx, "capacity-test", request);
+    m.reserve.mockRejectedValueOnce(
+      new McpError("capacity_unavailable", "Processing slots are full."),
+    );
+    const first = await executeResearchAnalysis(ctx, op.id, "capacity-test");
+    expect(first.status).toBe("approved");
+    expect(first.error).toContain("slots");
+    expect(m.trigger).not.toHaveBeenCalled();
+    const second = await executeResearchAnalysis(ctx, op.id, "capacity-test");
+    expect(second.status).toBe("queued");
+    expect(m.begin).toHaveBeenCalledTimes(1);
+    expect(m.consume).toHaveBeenCalledTimes(1);
+    expect(m.trigger).toHaveBeenCalledTimes(1);
   });
   it("keeps uncertain dispatch reserved without retrying a provider", async () => {
     await prepareResearchAnalysis(ctx, "research-key-5", request);

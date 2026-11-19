@@ -1,3 +1,4 @@
+import type { McpBudgetNotice } from "./mcp-budget";
 import { z } from "zod";
 import { socialYouTubeSettingsSchema } from "./publishing";
 
@@ -161,6 +162,7 @@ export type McpPrincipal = {
   scopes: string[];
 };
 export type McpPublicOperation = {
+  budget?: McpBudgetNotice;
   id: string;
   workspaceId: string;
   kind: string;

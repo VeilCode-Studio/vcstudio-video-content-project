@@ -109,6 +109,21 @@ export type ResearchConnectionView = {
   scopes: string[];
 };
 
+export const researchSelectionInputSchema = z.object({
+  accountId: z.uuid(),
+  historyPage: z.number().int().min(0).max(1000).default(0),
+  observationId: z.uuid().optional(),
+});
+export type ResearchSelection = {
+  selected: ResearchAccountView | null;
+  snapshots: ResearchSnapshotView[];
+  hasMoreSnapshots: boolean;
+  historyPage: number;
+  observationId: string | null;
+};
+export type ResearchSelectionResult =
+  { ok: true; data: ResearchSelection } | { ok: false; error: string };
+
 export const researchKeywordInputSchema = z.object({
   query: z.string().trim().max(100).default(""),
   kind: z.enum(["all", "keywords", "hashtags"]).default("all"),

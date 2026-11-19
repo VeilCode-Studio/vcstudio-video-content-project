@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useResearchSelection } from "@/hooks/useResearchSelection";
 import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -64,7 +65,9 @@ export type ResearchWorkspaceProps = {
   authorizationReference?: string | null;
 };
 
-export function ResearchWorkspace(props: ResearchWorkspaceProps) {
+export function ResearchWorkspace(initialProps: ResearchWorkspaceProps) {
+  const selection = useResearchSelection(initialProps);
+  const props = { ...initialProps, ...selection };
   const router = useRouter();
   const [pending, start] = useTransition();
   const busy = useRef(false);
@@ -215,11 +218,28 @@ export function ResearchWorkspace(props: ResearchWorkspaceProps) {
               {props.accounts.map((account) => (
                 <Link
                   key={account.id}
+                  prefetch={false}
+                  onClick={(event) => {
+                    if (
+                      event.button !== 0 ||
+                      event.metaKey ||
+                      event.ctrlKey ||
+                      event.shiftKey ||
+                      event.altKey
+                    )
+                      return;
+                    event.preventDefault();
+                    setMessage(null);
+                    setArchiveOpen(false);
+                    void selection.select(event.currentTarget.href);
+                  }}
                   href={`/app/social/research?account=${account.id}&page=${props.page}`}
                   aria-current={
-                    selected?.id === account.id ? "page" : undefined
+                    (selection.loading ?? selected?.id) === account.id
+                      ? "page"
+                      : undefined
                   }
-                  className={`flex min-w-0 flex-col gap-2 rounded-xl border p-4 transition-colors hover:bg-accent/40 ${selected?.id === account.id ? "border-primary/50 bg-accent/50" : "bg-card"}`}
+                  className={`flex min-w-0 flex-col gap-2 rounded-xl border p-4 transition-colors hover:bg-accent/40 ${(selection.loading ?? selected?.id) === account.id ? "border-primary/50 bg-accent/50" : "bg-card"}`}
                 >
                   <span className="break-words font-medium">
                     {account.name}
@@ -272,8 +292,25 @@ export function ResearchWorkspace(props: ResearchWorkspaceProps) {
         <section
           className="app-section min-w-0"
           aria-label="Account observations"
+          aria-busy={!!selection.loading}
         >
-          {selected ? (
+          {selection.error ? (
+            <p
+              role="alert"
+              className="rounded-xl border border-destructive/30 p-4 text-sm text-destructive"
+            >
+              {selection.error}
+            </p>
+          ) : null}
+          {selection.loading ? (
+            <div
+              role="status"
+              className="app-panel flex items-center gap-3 rounded-2xl border bg-card"
+            >
+              <Loader2Icon className="size-5 animate-spin" />
+              Loading account observations...
+            </div>
+          ) : selected ? (
             <>
               <header className="app-section">
                 <div className="flex flex-wrap items-center justify-between gap-3">
@@ -424,7 +461,7 @@ export function ResearchWorkspace(props: ResearchWorkspaceProps) {
                       id="research-observation"
                       value={snapshot.id}
                       onValueChange={(id) =>
-                        router.push(
+                        selection.select(
                           `/app/social/research?account=${selected.id}&page=${props.page}&historyPage=${props.historyPage}&observation=${id}`,
                         )
                       }
@@ -450,6 +487,19 @@ export function ResearchWorkspace(props: ResearchWorkspaceProps) {
                     {props.historyPage > 0 ? (
                       <Link
                         className="underline underline-offset-4"
+                        prefetch={false}
+                        onClick={(event) => {
+                          if (
+                            event.button !== 0 ||
+                            event.metaKey ||
+                            event.ctrlKey ||
+                            event.shiftKey ||
+                            event.altKey
+                          )
+                            return;
+                          event.preventDefault();
+                          void selection.select(event.currentTarget.href);
+                        }}
                         href={`/app/social/research?account=${selected.id}&page=${props.page}&historyPage=${props.historyPage - 1}`}
                       >
                         Newer observations
@@ -458,6 +508,19 @@ export function ResearchWorkspace(props: ResearchWorkspaceProps) {
                     {props.hasMoreSnapshots ? (
                       <Link
                         className="underline underline-offset-4"
+                        prefetch={false}
+                        onClick={(event) => {
+                          if (
+                            event.button !== 0 ||
+                            event.metaKey ||
+                            event.ctrlKey ||
+                            event.shiftKey ||
+                            event.altKey
+                          )
+                            return;
+                          event.preventDefault();
+                          void selection.select(event.currentTarget.href);
+                        }}
                         href={`/app/social/research?account=${selected.id}&page=${props.page}&historyPage=${props.historyPage + 1}`}
                       >
                         Older observations

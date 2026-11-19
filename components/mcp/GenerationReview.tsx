@@ -1,3 +1,4 @@
+import { McpBudgetNotice } from "./McpBudgetNotice";
 import type { ReactNode } from "react";
 import type { GenerationPreview } from "@studio/contracts/mcp-generation";
 import { Badge } from "@/components/ui/badge";
@@ -33,13 +34,14 @@ export function GenerationReview({
         </div>
         <div className="rounded-xl border p-4">
           <p className="text-sm text-muted-foreground">
-            Authorized estimate limit
+            Requested budget (advisory)
           </p>
           <p className="text-2xl font-semibold">
             {formatGenerationCost(preview.maximumCostCents)}
           </p>
         </div>
       </div>
+      <McpBudgetNotice notice={preview.budget} />
       <dl className="grid min-w-0 gap-3 text-sm">
         <div>
           <dt className="text-muted-foreground">Model</dt>

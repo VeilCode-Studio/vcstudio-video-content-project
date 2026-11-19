@@ -1,3 +1,19 @@
+vi.mock("./budget-notice", () => ({
+  loadMcpBudgetNotice: async (input: {
+    estimatedCostCents: number;
+    maximumCostCents: number;
+  }) => ({
+    policy: "advisory",
+    estimatedCostCents: input.estimatedCostCents,
+    requestedMaximumCostCents: input.maximumCostCents,
+    warnings:
+      input.estimatedCostCents > input.maximumCostCents
+        ? ["Budget exceeded; advisory only."]
+        : [],
+    execution:
+      "Follow the connection's approval mode. Cost and budget warnings do not require extra approval for an autonomous connection.",
+  }),
+}));
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { McpGenerationRequest } from "@studio/contracts/mcp-generation";
 import type { McpOperation } from "@/db/repositories/mcp.repository";
@@ -304,15 +320,18 @@ describe("MCP exact-cost generation preparation and execution", () => {
     expect(result.uiProof).toBeUndefined();
     expect(ctx.grant.publicationApprovalMode).toBe("manual");
   });
-  it("rejects a quote above the caller's maximum without reserving", async () => {
-    await expect(
-      prepareMcpGeneration(ctx, "cost-key-123", {
-        ...request,
-        maximumCostCents: 1,
-      }),
-    ).rejects.toThrow("maximum cost");
-    expect(m.begin).not.toHaveBeenCalled();
-    expect(m.reserve).not.toHaveBeenCalled();
+  it("prepares over-budget work with a notice and no extra approval in autonomous mode", async () => {
+    ctx.grant.generationApprovalMode = "autonomous";
+    const result = await prepareMcpGeneration(ctx, "cost-key-123", {
+      ...request,
+      maximumCostCents: 0,
+    });
+    expect(result.operation.status).toBe("prepared");
+    expect(result.preview.budget?.warnings.length).toBe(1);
+    expect(current?.input.budgetPolicy).toBe("advisory");
+    await executeMcpGeneration(ctx, result.operation.id, "cost-key-123");
+    expect(m.reserve).toHaveBeenCalledTimes(1);
+    expect(m.trigger).toHaveBeenCalledTimes(1);
   });
   it("reuses an identical preparation but conflicts on changed inputs", async () => {
     const result = await prepare();
@@ -353,6 +372,28 @@ describe("MCP exact-cost generation preparation and execution", () => {
       expect(m.reserve).not.toHaveBeenCalled();
     },
   );
+  it("preserves approval during capacity saturation and retries the same operation", async () => {
+    const prepared = await prepare(true);
+    m.reserve.mockRejectedValueOnce(
+      new McpError("capacity_unavailable", "Processing slots are full."),
+    );
+    const first = await executeMcpGeneration(
+      ctx,
+      prepared.operation.id,
+      "generation-key-123",
+    );
+    expect(first.status).toBe("approved");
+    expect(first.error).toContain("slots");
+    expect(m.trigger).not.toHaveBeenCalled();
+    expect(m.settle).not.toHaveBeenCalled();
+    await executeMcpGeneration(
+      ctx,
+      prepared.operation.id,
+      "generation-key-123",
+    );
+    expect(m.begin).toHaveBeenCalledTimes(1);
+    expect(m.trigger).toHaveBeenCalledTimes(1);
+  });
   it("lets an autonomous agent reserve and dispatch once, returning the same job on retry", async () => {
     const p = await prepare(true);
     const result = await executeMcpGeneration(
@@ -511,14 +552,12 @@ describe("MCP ElevenLabs video uses the shared video workflow", () => {
       /authorization/,
     );
   });
-  it("refuses cost above the caller's explicit cap", async () => {
-    setup();
-    await expect(
-      prepareMcpGeneration(ctx, "video-generation-key-004", {
-        ...videoRequest,
-        maximumCostCents: 20,
-      }),
-    ).rejects.toThrow(/maximum cost/);
+  it("returns video budget warnings without starting work during preparation", async () => {
+    const result = await prepareMcpGeneration(ctx, "video-low-budget", {
+      ...videoRequest,
+      maximumCostCents: 20,
+    });
+    expect(result.preview.budget?.warnings).toHaveLength(1);
     expect(m.videoStart).not.toHaveBeenCalled();
   });
 });

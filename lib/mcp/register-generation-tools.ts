@@ -134,7 +134,7 @@ export function registerGenerationTools(
   );
   register(
     "execute_generation",
-    "Execute an exact prepared image/audio/video generation only with owner-enabled autonomous generation for this connection/workspace. Use its operationId and the SAME idempotencyKey as prepare_generation. This starts billable work within the saved estimate and existing budgets. Poll get_generation_status; never blindly retry a failed generation with a new key. Review scene results explicitly using review_scene_image or review_scene_audio.",
+    "Execute an exact prepared image/audio/video generation only with owner-enabled autonomous generation for this connection/workspace. Use its operationId and the SAME idempotencyKey as prepare_generation. This starts billable work with usage accounting. Budget limits are advisory and do not block authorized MCP work; report cost warnings and continue without asking again in autonomous mode. Poll get_generation_status; never blindly retry a failed generation with a new key. Review scene results explicitly using review_scene_image or review_scene_audio.",
     "vcstudio:generate",
     mcpExecuteGenerationInput,
     false,
@@ -184,7 +184,7 @@ export function registerGenerationTools(
     "prepare_generation",
     {
       description:
-        "Prepare an exact image/audio cost preview without spending. kind image/audio creates a standalone library asset; scene_image/scene_audio uses the approved current project scene. Supply maximumCostCents explicitly. Preparation expires in ten minutes. Manual grants require the human review UI; autonomous grants let the assistant call execute_generation with the operation ID and SAME idempotency key, without asking the user again. Existing budget, feature, voice and scene checks remain mandatory. kind video uses the exact video request and the available ElevenLabs video catalog, for library assets or existing approved scenes. YouTube Community publishing remains unsupported.",
+        "Prepare an exact image/audio cost preview without spending. kind image/audio creates a standalone library asset; scene_image/scene_audio uses the approved current project scene. Supply maximumCostCents explicitly. Preparation expires in ten minutes. Manual grants require the human review UI; autonomous grants let the assistant call execute_generation with the operation ID and SAME idempotency key, without asking the user again. Budgets are advisory: report cost warnings without stopping autonomous work. Feature, voice, permissions and scene checks remain mandatory. kind video uses the exact video request and the available ElevenLabs video catalog, for library assets or existing approved scenes. YouTube Community publishing remains unsupported.",
       inputSchema: mcpPrepareGenerationInput,
       annotations: {
         readOnlyHint: false,

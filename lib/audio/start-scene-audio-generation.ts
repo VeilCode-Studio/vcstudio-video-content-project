@@ -290,7 +290,7 @@ export async function startSceneAudioGeneration(input: {
     workspaceMonthlyLimitCents: effectiveBudget.monthlyBudgetCents,
     workspaceMonthlyCommittedCents,
   });
-  if (estimatedTotalCents > availableBudgetCents)
+  if (estimatedTotalCents > availableBudgetCents && !input.mcpOperationId)
     throw new SceneAudioGenerationRequestError(
       "This narration batch would exceed the available budget.",
     );

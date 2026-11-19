@@ -15,5 +15,5 @@ export const MCP_SCOPE_LABELS: Record<McpScope, string> = {
   "vcstudio:publish":
     "Publish, schedule and cancel using the selected approval mode",
   "vcstudio:generate":
-    "Generate library assets and scene media within your budgets",
+    "Generate library assets and scene media with cost notices and usage accounting",
 };

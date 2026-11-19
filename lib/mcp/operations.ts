@@ -1,3 +1,5 @@
+import { mcpBudgetNoticeSchema } from "@studio/contracts/mcp-budget";
+import { z } from "zod";
 import "server-only";
 import type { McpPublicOperation } from "@studio/contracts";
 import {
@@ -19,7 +21,11 @@ export function publicOperation(row: McpOperation): McpPublicOperation {
       "queued",
       "running",
     ].includes(row.status);
+  const budget = z
+    .object({ preview: z.object({ budget: mcpBudgetNoticeSchema }) })
+    .safeParse(row.input);
   return {
+    ...(budget.success ? { budget: budget.data.preview.budget } : {}),
     id: row.id,
     workspaceId: row.workspaceId,
     kind: row.kind,

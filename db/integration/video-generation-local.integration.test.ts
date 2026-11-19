@@ -85,7 +85,7 @@ beforeAll(async () => {
   ).split("--> statement-breakpoint"))
     if (statement.trim()) await pg.exec(statement);
   await pg.exec(
-    "create table mcp_operations(id uuid primary key, workspace_id uuid not null references workspaces(id), unique(id,workspace_id));",
+    "create table mcp_operations(id uuid primary key, workspace_id uuid not null references workspaces(id), user_id uuid, kind text, status text, input jsonb, expires_at timestamptz, unique(id,workspace_id));",
   );
   for (const statement of (
     await readFile(
@@ -423,5 +423,39 @@ describe("video MCP tenant migration", () => {
         other.id,
       ]),
     ).rejects.toThrow();
+  });
+});
+
+describe("MCP advisory video budgets", () => {
+  it("bypasses all monetary limits only for a matching approved operation, and keeps tenant/revision guards", async () => {
+    await pg.query(
+      "update video_generations set status='succeeded' where status in ('queued','submitting','running','inspecting')",
+    );
+    const op = randomUUID();
+    await pg.query(
+      "insert into mcp_operations(id,workspace_id,user_id,kind,status,input,expires_at) values($1,$2,$3,'generate_media','approved',$4::jsonb,now()+interval '1 hour')",
+      [op, workspace, user, JSON.stringify({ budgetPolicy: "advisory" })],
+    );
+    const value = input({
+      mcpOperationId: op,
+      fingerprint: "advisory-distinct-request",
+      maximumCostCents: 0,
+      dailyBudgetCents: 0,
+      monthlyBudgetCents: 0,
+      videoDailyBudgetCents: 0,
+      videoLifetimeBudgetCents: 0,
+    });
+    expect((await reserve(value)).result).toBe("allowed");
+    expect((await reserve(value)).result).toBe("existing");
+    await pg.query(
+      "update video_generations set status='succeeded' where id=$1",
+      [value.id],
+    );
+    const wrong = input({
+      mcpOperationId: op,
+      workspaceId: otherWorkspace,
+      maximumCostCents: 0,
+    });
+    expect((await reserve(wrong)).result).toBe("operation_budget");
   });
 });

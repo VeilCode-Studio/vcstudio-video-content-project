@@ -1,3 +1,4 @@
+vi.mock("./selection", () => ({ loadResearchSelection: mocks.selection }));
 import { beforeEach, describe, expect, it, vi } from "vitest";
 vi.mock("server-only", () => ({}));
 const mocks = vi.hoisted(() => ({
@@ -12,6 +13,7 @@ const mocks = vi.hoisted(() => ({
   sources: vi.fn(),
   remove: vi.fn(),
   previews: vi.fn(),
+  selection: vi.fn(),
 }));
 vi.mock("@/lib/auth/workspace-context", () => ({
   getAuthenticatedWorkspaceContext: mocks.context,
@@ -46,6 +48,7 @@ import {
   refreshResearchSourcesAction,
   deleteResearchAccountAction,
   loadResearchPreviewsAction,
+  loadResearchSelectionAction,
 } from "@/app/(authenticated)/app/social/research/actions";
 const workspaceId = "11111111-1111-4111-8111-111111111111";
 const accountId = "22222222-2222-4222-8222-222222222222";
@@ -282,5 +285,38 @@ describe("transient research preview authorization", () => {
     const result = await loadResearchPreviewsAction({ snapshotId: accountId });
     expect(result).toMatchObject({ ok: false });
     expect(JSON.stringify(result)).not.toContain("secret");
+  });
+});
+
+describe("stable research selection reads", () => {
+  it("resolves the server workspace and allows existing viewer reads", async () => {
+    mocks.context.mockResolvedValue(auth("viewer"));
+    mocks.selection.mockResolvedValue({
+      selected: { id: accountId },
+      snapshots: [],
+    });
+    const result = await loadResearchSelectionAction({
+      accountId,
+      workspaceId: "untrusted",
+    });
+    expect(result.ok).toBe(true);
+    expect(mocks.selection).toHaveBeenCalledWith(workspaceId, {
+      accountId,
+      workspaceId: "untrusted",
+    });
+  });
+  it("never reads when disabled or signed out", async () => {
+    mocks.enabled.mockReturnValue(false);
+    expect((await loadResearchSelectionAction({ accountId })).ok).toBe(false);
+    mocks.enabled.mockReturnValue(true);
+    mocks.context.mockResolvedValue(null);
+    expect((await loadResearchSelectionAction({ accountId })).ok).toBe(false);
+    expect(mocks.selection).not.toHaveBeenCalled();
+  });
+  it("redacts internal read failures", async () => {
+    mocks.selection.mockRejectedValue(new Error("database password internal"));
+    const result = await loadResearchSelectionAction({ accountId });
+    expect(result.ok).toBe(false);
+    expect(JSON.stringify(result)).not.toContain("password");
   });
 });

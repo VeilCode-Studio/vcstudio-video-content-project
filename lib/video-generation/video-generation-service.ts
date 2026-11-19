@@ -193,6 +193,7 @@ export async function sceneStarterVideoReference(
 export async function planAuthorizedVideoRequest(
   context: { workspaceId: string; userId: string },
   request: VideoGenerationRequest,
+  budgetPolicy: "enforced" | "advisory" = "enforced",
 ) {
   const environment = getVideoGenerationEnvironment();
   if (!environment.ENABLE_VIDEO_GENERATION)
@@ -216,7 +217,10 @@ export async function planAuthorizedVideoRequest(
       "pricing_unavailable",
       "Pricing must be configured before generation.",
     );
-  if (plan.estimatedCostCents > environment.VIDEO_GENERATION_MAX_COST_CENTS)
+  if (
+    budgetPolicy !== "advisory" &&
+    plan.estimatedCostCents > environment.VIDEO_GENERATION_MAX_COST_CENTS
+  )
     throw new VideoOperationError(
       "operation_budget",
       "This estimate exceeds the video spending limit. Choose a smaller resolution or shorter clip.",
@@ -326,7 +330,11 @@ export async function startAuthorizedVideoGeneration(
       ? { id: existing.id, dispatched: true }
       : dispatchVideo(context.workspaceId, existing.id);
   }
-  const planned = await planAuthorizedVideoRequest(context, input.request);
+  const planned = await planAuthorizedVideoRequest(
+    context,
+    input.request,
+    mcpOperationId ? "advisory" : "enforced",
+  );
   const quote = verifyVideoQuote({
     ...planned.quoteContext,
     token: input.quoteToken,

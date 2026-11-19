@@ -1,4 +1,5 @@
 "use client";
+import { McpBudgetNotice } from "./McpBudgetNotice";
 import { useActionState } from "react";
 import type { McpPublicOperation } from "@studio/contracts";
 import type { ResearchAnalysisPreview } from "@studio/contracts/mcp-research";
@@ -48,6 +49,7 @@ export function ResearchAnalysisBrowserApproval({
       >
         View original post
       </a>
+      <McpBudgetNotice notice={preview.budget} />
       <dl className="grid gap-4 text-sm sm:grid-cols-2">
         <div>
           <dt className="text-muted-foreground">Analysis goal</dt>
@@ -62,7 +64,7 @@ export function ResearchAnalysisBrowserApproval({
           <dd>${(preview.estimatedCostCents / 100).toFixed(2)} USD</dd>
         </div>
         <div>
-          <dt className="text-muted-foreground">Authorized maximum</dt>
+          <dt className="text-muted-foreground">Requested budget (advisory)</dt>
           <dd>${(preview.maximumCostCents / 100).toFixed(2)} USD</dd>
         </div>
       </dl>

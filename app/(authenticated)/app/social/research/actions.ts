@@ -1,6 +1,8 @@
 "use server";
 
 import { z } from "zod";
+import { loadResearchSelection } from "@/lib/social/research/selection";
+import type { ResearchSelectionResult } from "@studio/contracts/social-research";
 import { revalidatePath } from "next/cache";
 import {
   researchAccountInputSchema,
@@ -47,6 +49,39 @@ export async function loadResearchPreviewsAction(
         error instanceof SocialResearchError
           ? error.message
           : "Previews could not load. Your saved research is unchanged; try again or open the original post.",
+    };
+  }
+}
+
+export async function loadResearchSelectionAction(
+  input: unknown,
+): Promise<ResearchSelectionResult> {
+  try {
+    if (!isSocialResearchEnabled())
+      throw new SocialResearchError(
+        "configuration",
+        "Social research is disabled.",
+      );
+    const auth = await getAuthenticatedWorkspaceContext();
+    if (!auth)
+      throw new SocialResearchError(
+        "access",
+        "Sign in and select your workspace first.",
+      );
+    return {
+      ok: true,
+      data: await loadResearchSelection(
+        auth.activeMembership.workspaceId,
+        input,
+      ),
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      error:
+        error instanceof SocialResearchError
+          ? error.message
+          : "Account observations could not load. Select the account again to retry; your watchlist is unchanged.",
     };
   }
 }

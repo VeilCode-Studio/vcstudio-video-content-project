@@ -1,3 +1,4 @@
+import { mcpAdvisoryBudgetSql } from "./mcp-advisory-budget-sql";
 import { sql } from "drizzle-orm";
 export type McpGenerationReservationInput = {
   workspaceId: string;
@@ -20,7 +21,7 @@ export function buildMcpGenerationReservationSql(
     insert into usage_reservations(workspace_id,operation_type,media_generation_operation_id,reserved_cost_cents,expires_at)
     select ${p.workspaceId}::uuid,${p.kind === "research_analysis" ? "research_analysis" : "media_generation"}::usage_operation_type,o.id,${p.estimatedCostCents},o.expires_at from mcp_operations o cross join totals t
     where o.id=${p.operationId}::uuid and o.workspace_id=${p.workspaceId}::uuid and o.kind=${p.kind ?? "generate_media"} and o.status='approved' and o.expires_at>now()
-      and ${p.estimatedCostCents}>0 and ${p.estimatedCostCents}<=${p.maximumCostCents} and t.daily+${p.estimatedCostCents}<=${p.dailyBudgetCents} and t.monthly+${p.estimatedCostCents}<=${p.monthlyBudgetCents}
+      and ${p.estimatedCostCents}>0 and (${mcpAdvisoryBudgetSql({ workspaceId: p.workspaceId, operationId: p.operationId })} or (${p.estimatedCostCents}<=${p.maximumCostCents} and t.daily+${p.estimatedCostCents}<=${p.dailyBudgetCents} and t.monthly+${p.estimatedCostCents}<=${p.monthlyBudgetCents}))
       and (select count(*) from usage_reservations where workspace_id=${p.workspaceId}::uuid and operation_type::text=${p.kind === "research_analysis" ? "research_analysis" : "media_generation"} and status='pending')<4
       and not exists(select 1 from usage_reservations where media_generation_operation_id=o.id)
     on conflict do nothing returning *

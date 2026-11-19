@@ -95,13 +95,14 @@ async function reserve(
   operationId: string,
   limit = 1000,
   workspaceId = mcpIds.workspace,
+  maximumCostCents = 5,
 ) {
   const q = new PgDialect().sqlToQuery(
     buildMcpGenerationReservationSql({
       operationId,
       workspaceId,
       estimatedCostCents: 5,
-      maximumCostCents: 5,
+      maximumCostCents,
       dailyBudgetCents: limit,
       monthlyBudgetCents: limit,
     }),
@@ -190,6 +191,32 @@ describe("generated MCP media migration and money-safe SQL", () => {
         )
       ).rows[0],
     ).toEqual({ total: 0 });
+  });
+  it("reserves and settles approved advisory operations above zero budgets, preserving idempotency and tenant checks", async () => {
+    const id = await operation();
+    await pg.query("update mcp_operations set input=$2::jsonb where id=$1", [
+      id,
+      JSON.stringify({ budgetPolicy: "advisory" }),
+    ]);
+    const reservation = await reserve(id, 0, mcpIds.workspace, 0);
+    expect(reservation).toBeTruthy();
+    expect(await reserve(id, 0, mcpIds.workspace, 0)).toBe(reservation);
+    expect(await reserve(id, 0, otherWorkspace)).toBeNull();
+    await settleMcpGeneration(mcpIds.workspace, id, 5);
+    expect(
+      (
+        await pg.query(
+          "select status,actual_cost_cents from usage_reservations where id=$1",
+          [reservation],
+        )
+      ).rows[0],
+    ).toEqual({ status: "reconciled", actual_cost_cents: 5 });
+    const pending = await operation("prepared");
+    await pg.query("update mcp_operations set input=$2::jsonb where id=$1", [
+      pending,
+      JSON.stringify({ budgetPolicy: "advisory" }),
+    ]);
+    expect(await reserve(pending, 0)).toBeNull();
   });
   it("blocks cross-workspace reservation pointers and mixed operation pointers", async () => {
     const id = await operation();

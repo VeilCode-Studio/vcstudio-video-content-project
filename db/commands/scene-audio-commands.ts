@@ -1,3 +1,4 @@
+import { mcpAdvisoryBudgetSql } from "./mcp-advisory-budget-sql";
 import "server-only";
 import { assertCurrentMediaReview } from "@/lib/scenes/assert-current-media-review";
 
@@ -203,9 +204,10 @@ export async function createSceneAudioGenerationReservation(input: {
         where p.workspace_id = ${input.workspaceId}
           and p.id = ${input.projectId}
           and p.archived_at is null
-          and c.project_cents + ${input.estimatedCostCents} <= p.maximum_budget_cents
-          and c.daily_cents + ${input.estimatedCostCents} <= ${input.budget.workspaceDailyLimitCents}
-          and c.monthly_cents + ${input.estimatedCostCents} <= ${input.budget.workspaceMonthlyLimitCents}
+          and (${mcpAdvisoryBudgetSql({ workspaceId: input.workspaceId, operationId: input.mcpOperationId, userId: input.requestedByUserId, projectId: input.projectId })} or (
+            c.project_cents + ${input.estimatedCostCents} <= p.maximum_budget_cents
+            and c.daily_cents + ${input.estimatedCostCents} <= ${input.budget.workspaceDailyLimitCents}
+            and c.monthly_cents + ${input.estimatedCostCents} <= ${input.budget.workspaceMonthlyLimitCents}))
       ),
       inserted_generation as (
         insert into scene_audio_generations (

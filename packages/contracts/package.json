@@ -13,6 +13,7 @@
     "./voice-preset": "./src/voice-preset.ts",
     "./social-research": "./src/social-research.ts",
     "./social-research-previews": "./src/social-research-previews.ts",
+    "./mcp-budget": "./src/mcp-budget.ts",
     "./mcp-research": "./src/mcp-research.ts"
   },
   "dependencies": {

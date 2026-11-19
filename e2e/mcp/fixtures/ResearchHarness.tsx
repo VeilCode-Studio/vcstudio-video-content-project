@@ -103,6 +103,12 @@ export function ResearchHarness() {
       comments: 4,
       shares: null,
     });
+  props.accounts.push({
+    ...props.accounts[0]!,
+    id: "55555555-5555-4555-8555-555555555555",
+    name: "Second research account",
+    identifier: "second.studio",
+  });
   props.selected = props.accounts[0]!;
   return <ResearchWorkspace {...props} />;
 }

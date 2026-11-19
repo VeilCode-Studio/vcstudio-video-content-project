@@ -1,3 +1,4 @@
+import { mcpBudgetNoticeSchema } from "./mcp-budget";
 import { videoGenerationRequestSchema } from "./video";
 import { z } from "zod";
 import { mcpMutationInput, mcpWorkspaceInput } from "./mcp";
@@ -12,7 +13,14 @@ export const IMAGE_GENERATION_SIZES = [
 export const IMAGE_GENERATION_QUALITIES = ["low", "medium", "high"] as const;
 export const imageGenerationSizeSchema = z.enum(IMAGE_GENERATION_SIZES);
 export const imageGenerationQualitySchema = z.enum(IMAGE_GENERATION_QUALITIES);
-const maximumCostCents = z.number().int().min(1).max(100000);
+const maximumCostCents = z
+  .number()
+  .int()
+  .min(0)
+  .max(100000)
+  .describe(
+    "Advisory cost budget in cents. Exceeding it returns a warning, not a block or an additional approval requirement.",
+  );
 const references = z
   .array(z.uuid())
   .max(16)
@@ -81,6 +89,7 @@ export const mcpGenerationOptionsInput = mcpWorkspaceInput.extend({
   projectId: z.uuid().optional(),
 });
 export const generationPreviewSchema = z.object({
+  budget: mcpBudgetNoticeSchema.optional(),
   kind: z.enum(["image", "audio", "scene_image", "scene_audio", "video"]),
   title: z.string(),
   text: z.string(),

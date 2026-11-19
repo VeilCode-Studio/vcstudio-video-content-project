@@ -44,6 +44,7 @@ export async function buildMcpVideoPlan(
   const planned = await planAuthorizedVideoRequest(
     { workspaceId: ctx.workspaceId, userId: ctx.principal.userId },
     request.video,
+    "advisory",
   );
   return {
     kind: "video" as const,
