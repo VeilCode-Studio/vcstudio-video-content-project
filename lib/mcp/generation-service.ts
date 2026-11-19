@@ -620,7 +620,7 @@ async function dispatchGeneration(op: McpOperation) {
       requireMcp(
         audio.reservedCount > 0,
         "generation_limit",
-        "No narration was reserved. Check the scene's generation limit and project budget before preparing another request.",
+        "No narration was reserved. Check the current scene and its generation limit before preparing another request. MCP budgets are advisory.",
       );
       if (!audio.dispatched) {
         await updateMcpOperation({

@@ -645,7 +645,7 @@ Phases 1–12 are implemented through authenticated workspaces, project/script v
 
 ## Recent major changes
 
-- 2026-11-19: Stable research selection keeps the watchlist and header mounted while only observations load, with pending/error feedback, race protection and URL/history support. MCP 1.4.2 makes generation and analysis budgets advisory with inspectable cost notices, while preserving reservations, settlement and authorization. Scene image/audio and eligible MCP video share this policy. No migration, environment change or recurring job added.
+- 2026-11-19: Stable research selection keeps the watchlist and header mounted while only observations load, with pending/error feedback, race protection and URL/history support. MCP 1.4.2 makes generation and analysis budgets advisory with inspectable cost notices and consistent project-tool guidance, while preserving reservations, settlement and authorization. Scene image/audio and eligible MCP video share this policy. No migration, environment change or recurring job added.
 
 - 2026-11-19: Added shared saved keyword research for Social and MCP 1.4.1 (63 registered/61 assistant-callable tools). Bounded tenant-scoped reads select the latest successful observations and optional factual media evidence, with exact phrase/hashtag matching, deduplication, honest missing metrics, source links and responsive Light/Dark UI. No migration, dependency, environment, paid operation or worker change. Marketing remains paused. Meta hashtag-history access responded successfully with empty history; live hashtag-media discovery remains unverified and unconfigured. See [implementation limits](docs/social-keyword-research.md).
 

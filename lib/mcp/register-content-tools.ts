@@ -73,7 +73,7 @@ export function registerContentTools(register: McpToolRegistrar) {
   );
   register(
     "create_project",
-    "Create a basic project without starting generation. defaultVisualMedia chooses image (still images) or video (video footage); individual scenes can override it. Specify budget in cents; zero disables paid production.",
+    "Create a basic project without starting generation. defaultVisualMedia chooses image (still images) or video (video footage); individual scenes can override it. Specify the project budget in cents. Browser production enforces this budget; authenticated MCP generation treats it as advisory, including zero, and returns cost warnings without blocking authorized autonomous work.",
     "vcstudio:edit",
     mcpMutationInput.extend(createProjectSchema.shape),
     false,
