@@ -108,3 +108,79 @@ export type ResearchConnectionView = {
   sources: ResearchSource[];
   scopes: string[];
 };
+
+export const researchKeywordInputSchema = z.object({
+  query: z.string().trim().max(100).default(""),
+  kind: z.enum(["all", "keywords", "hashtags"]).default("all"),
+  platform: z.enum(["all", "facebook", "instagram"]).default("all"),
+  accountId: z.union([z.literal("all"), z.uuid()]).default("all"),
+  media: z.enum(["captions", "captions_and_media"]).default("captions"),
+  page: z.number().int().min(1).max(1000).default(1),
+});
+export type ResearchKeywordInput = z.infer<typeof researchKeywordInputSchema>;
+
+export const researchKeywordSampleSchema = z.object({
+  accountId: z.uuid(),
+  accountName: z.string().max(200),
+  platform: researchPlatformSchema,
+  snapshotId: z.uuid().nullable(),
+  observedAt: z.iso.datetime({ offset: true }).nullable(),
+  posts: z
+    .array(researchPostSchema.extend({ textTruncated: z.boolean() }))
+    .max(25),
+  hasMore: z.boolean(),
+});
+export type ResearchKeywordSample = z.infer<typeof researchKeywordSampleSchema>;
+
+export const researchKeywordMediaSchema = z.object({
+  operationId: z.uuid(),
+  snapshotId: z.uuid(),
+  postId: z.string().max(120),
+  transcript: z.string().max(6000).nullable(),
+  evidence: z.array(z.string().max(1500)).max(10),
+});
+export type ResearchKeywordMedia = z.infer<typeof researchKeywordMediaSchema>;
+
+export type ResearchKeywordTerm = {
+  term: string;
+  kind: "keyword" | "hashtag";
+  postCount: number;
+  captionPostCount: number;
+  mediaPostCount: number;
+  accountCount: number;
+  measuredPostCount: number;
+  medianInteractions: number | null;
+  evidence: { snapshotId: string; postId: string; url: string }[];
+};
+export type ResearchKeywordEvidence = {
+  accountId: string;
+  accountName: string;
+  platform: ResearchPlatform;
+  snapshotId: string;
+  observedAt: string;
+  post: ResearchPost;
+  mediaOperationId: string | null;
+  matchedIn: ("caption" | "media")[];
+  interactions: number | null;
+};
+export type ResearchKeywordReport = {
+  filters: ResearchKeywordInput;
+  coverage: {
+    accounts: number;
+    observations: number;
+    posts: number;
+    matchedPosts: number;
+    mediaPosts: number;
+    measuredPosts: number;
+    oldestObservation: string | null;
+    newestObservation: string | null;
+    accountsTruncated: boolean;
+    captionsTruncated: boolean;
+    providerHasMore: boolean;
+  };
+  terms: ResearchKeywordTerm[];
+  posts: ResearchKeywordEvidence[];
+  hasMore: boolean;
+  limitations: string[];
+  hashtagDiscovery: "not_configured";
+};

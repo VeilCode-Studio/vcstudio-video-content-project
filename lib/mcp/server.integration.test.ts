@@ -18,8 +18,12 @@ const m = vi.hoisted(() => ({
   researchObservation: vi.fn(),
   researchSummaries: vi.fn(),
   researchAnalyses: vi.fn(),
+  keywords: vi.fn(),
 }));
 vi.mock("@/lib/mcp/context", () => ({ authorizeMcp: m.authorize }));
+vi.mock("@/lib/social/research/keyword-service", () => ({
+  loadResearchKeywords: m.keywords,
+}));
 vi.mock("@/lib/mcp/rate-limit", () => ({ enforceMcpRateLimit: vi.fn() }));
 vi.mock("@/lib/env/server", () => ({
   getMcpEnvironment: () => ({
@@ -138,6 +142,60 @@ async function client() {
   return instance;
 }
 describe("real MCP SDK interoperability", () => {
+  it("authorizes saved keyword reads with Read only and forwards bounded filters without execution", async () => {
+    m.keywords.mockResolvedValue({
+      terms: [],
+      hashtagDiscovery: "not_configured",
+    });
+    const api = await client();
+    const result = await api.callTool({
+      name: "get_research_keywords",
+      arguments: {
+        workspaceId: mcpIds.workspace,
+        query: "saving money",
+        media: "captions_and_media",
+      },
+    });
+    expect(result.isError).not.toBe(true);
+    expect(result.structuredContent).toMatchObject({
+      ok: true,
+      data: { terms: [], hashtagDiscovery: "not_configured" },
+    });
+    expect(m.authorize).toHaveBeenCalledWith(
+      ctx.principal,
+      mcpIds.workspace,
+      "vcstudio:read",
+    );
+    expect(m.keywords).toHaveBeenCalledWith(
+      mcpIds.workspace,
+      expect.objectContaining({
+        query: "saving money",
+        page: 1,
+        media: "captions_and_media",
+      }),
+    );
+    m.keywords.mockClear();
+    const invalid = await api.callTool({
+      name: "get_research_keywords",
+      arguments: {
+        workspaceId: mcpIds.workspace,
+        accountId: "foreign-or-malformed",
+      },
+    });
+    expect(invalid.isError).toBe(true);
+    expect(m.keywords).not.toHaveBeenCalled();
+  });
+  it("does not invoke keyword reads when current workspace authorization fails", async () => {
+    m.authorize.mockRejectedValue(new McpScopeError("vcstudio:read"));
+    const result = await (
+      await client()
+    ).callTool({
+      name: "get_research_keywords",
+      arguments: { workspaceId: mcpIds.workspace },
+    });
+    expect(result.isError).toBe(true);
+    expect(m.keywords).not.toHaveBeenCalled();
+  });
   it("pages research captions and reads an exact post without duplicating captions in rankings", async () => {
     m.researchAccount.mockResolvedValue({ id: mcpIds.asset });
     const posts = Array.from({ length: 25 }, (_, i) => ({
@@ -268,9 +326,9 @@ describe("real MCP SDK interoperability", () => {
     );
   });
 
-  it("publishes explicit OAuth metadata for all 62 tools without exposing UI approvals to the model", async () => {
+  it("publishes explicit OAuth metadata for all 63 tools without exposing UI approvals to the model", async () => {
     const tools = (await (await client()).listTools()).tools;
-    expect(tools).toHaveLength(62);
+    expect(tools).toHaveLength(63);
     expect(
       tools.filter(
         (tool) =>
@@ -292,6 +350,7 @@ describe("real MCP SDK interoperability", () => {
         tools.find((tool) => tool.name === name)?._meta?.securitySchemes,
       ).toEqual([{ type: "oauth2", scopes: ["vcstudio:generate"] }]);
     for (const name of [
+      "get_research_keywords",
       "list_research_accounts",
       "get_research_account",
       "get_research_observation",

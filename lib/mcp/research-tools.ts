@@ -5,7 +5,11 @@ import {
   mcpPageInput,
   mcpWorkspaceInput,
 } from "@studio/contracts";
-import { researchAccountInputSchema } from "@studio/contracts/social-research";
+import {
+  researchAccountInputSchema,
+  researchKeywordInputSchema,
+} from "@studio/contracts/social-research";
+import { loadResearchKeywords } from "@/lib/social/research/keyword-service";
 import {
   prepareResearchAnalysisInput,
   executeResearchAnalysisInput,
@@ -68,6 +72,17 @@ async function requireSavedAccount(ctx: McpContext, id: string) {
   return row;
 }
 export function registerResearchTools(register: McpToolRegistrar) {
+  register(
+    "get_research_keywords",
+    "Research caption keywords, hashtags and phrases across the latest saved observations of up to 20 active accounts (25 posts each). Optional media mode reuses completed transcripts and quoted evidence, never starts paid analysis. Returns frequency, available engagement, source posts, dates, coverage and limitations. Not a live Meta-wide search, search volume or proof of causality. Read-only; no approval required.",
+    "vcstudio:read",
+    mcpWorkspaceInput.extend(researchKeywordInputSchema.shape),
+    true,
+    (ctx, p) => {
+      enabled();
+      return safe(() => loadResearchKeywords(ctx.workspaceId, p));
+    },
+  );
   register(
     "list_research_accounts",
     "List this workspace's saved Facebook/Instagram research watchlist and available source identities. Saved reads only; does not refresh, authorize Meta or activate Marketing.",

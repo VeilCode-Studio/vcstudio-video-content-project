@@ -15,6 +15,6 @@ export default defineConfig({
     command: "node scripts/serve-mcp-ui-tests.mjs",
     url: "http://127.0.0.1:38173/harness.html",
     reuseExistingServer: false,
-    timeout: 60000,
+    timeout: 180000,
   },
 });

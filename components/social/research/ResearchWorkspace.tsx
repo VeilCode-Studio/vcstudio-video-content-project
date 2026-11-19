@@ -114,7 +114,26 @@ export function ResearchWorkspace(props: ResearchWorkspaceProps) {
             compare their posts and turn evidence into your next experiment.
           </p>
         </div>
-        {props.enabled && props.canResearch ? <ResearchAccountForm /> : null}
+        <div className="flex flex-wrap items-center gap-2">
+          {props.enabled ? (
+            <Button
+              variant="outline"
+              nativeButton={false}
+              render={
+                <Link
+                  href={
+                    props.selected
+                      ? `/app/social/research/keywords?accountId=${props.selected.id}`
+                      : "/app/social/research/keywords"
+                  }
+                />
+              }
+            >
+              Keyword research
+            </Button>
+          ) : null}
+          {props.enabled && props.canResearch ? <ResearchAccountForm /> : null}
+        </div>
       </header>
       {props.authorization ? (
         <ResearchAuthorizationFeedback

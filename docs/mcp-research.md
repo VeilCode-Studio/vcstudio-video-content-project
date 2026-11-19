@@ -1,5 +1,9 @@
 # MCP account research and media analysis
 
+## Saved keyword extension — 19 November 2026
+
+Version 1.4.1 adds `get_research_keywords` (63 registered tools/61 assistant-callable). This read-only shared service analyzes the latest saved captions and optionally completed factual media evidence, without refreshing Meta or charging for analysis. Existing Read consent and workspace access apply. See [keyword research and limits](social-keyword-research.md); live hashtag discovery remains unconfigured. Historical release verification below refers to 1.4.0.
+
 ## Delivery state
 
 Released to production on 15 November 2026 as implementation commit `f9255a0`. MCP server version 1.4.0 exposes 62 registered tools, of which 60 are assistant-callable. Existing generation/publication approvals remain app-only tools; analysis cannot be approved by an ordinary model-supplied Boolean. The manual analysis review uses the signed-in browser fallback. An autonomous analysis grant completes prepare/execute/status through MCP with no browser step.

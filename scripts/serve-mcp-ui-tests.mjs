@@ -19,7 +19,11 @@ const applicationCss = (
     },
   )
 ).css;
+const selectedFixtures = process.env.MCP_UI_FIXTURES
+  ? new Set(process.env.MCP_UI_FIXTURES.split(","))
+  : null;
 for (const [name, entry] of [
+  ["research-keywords", "e2e/mcp/fixtures/research-keywords-entry.tsx"],
   ["research", "e2e/mcp/fixtures/research-entry.tsx"],
   ["harness", "e2e/mcp/fixtures/entry.tsx"],
   ["elevenlabs-voice", "e2e/mcp/fixtures/elevenlabs-voice-entry.tsx"],
@@ -42,6 +46,8 @@ for (const [name, entry] of [
   ["media-upload", "e2e/mcp/fixtures/media-upload-entry.tsx"],
   ["media-library", "e2e/mcp/fixtures/media-library-entry.tsx"],
 ]) {
+  if (selectedFixtures && name !== "harness" && !selectedFixtures.has(name))
+    continue;
   const bundle = await build({
     entryPoints: [entry],
     bundle: true,
@@ -51,6 +57,13 @@ for (const [name, entry] of [
     target: "es2022",
     define: { "process.env.NODE_ENV": '"production"' },
     alias: {
+      ...(name === "research-keywords"
+        ? {
+            "next/navigation": path.resolve(
+              "e2e/mcp/fixtures/MockOperationsNavigation.ts",
+            ),
+          }
+        : {}),
       ...(name === "research"
         ? {
             "next/navigation": path.resolve(
@@ -206,6 +219,7 @@ const server = createServer(async (req, res) => {
     return;
   }
   const allowed = {
+    "/research-keywords.html": path.join(out, "research-keywords.html"),
     "/research.html": path.join(out, "research.html"),
     "/host.html": path.join(out, "host.html"),
     "/upload-host.html": path.join(out, "upload-host.html"),

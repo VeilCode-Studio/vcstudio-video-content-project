@@ -25,6 +25,14 @@ import {
 } from "@/db/repositories/social-research.repository";
 import { researchConnectionView } from "@/lib/social/research/view";
 import {
+  listResearchKeywordSamples,
+  listResearchKeywordMedia,
+} from "@/db/repositories/research-keywords.repository";
+import {
+  researchKeywordInputSchema,
+  researchKeywordSampleSchema,
+} from "@studio/contracts/social-research";
+import {
   openResearchToken,
   sealResearchToken,
 } from "@/lib/social/research/secrets";
@@ -97,6 +105,92 @@ async function claim(accountId: string, requestId = randomUUID()) {
   };
 }
 describe("isolated PostgreSQL research storage", () => {
+  it("keyword projections select only latest successful tenant observations with capped captions and exact completed evidence", async () => {
+    const target = await account("19999");
+    const snapshot = randomUUID(),
+      older = randomUUID(),
+      failed = randomUUID();
+    const post = {
+      id: "keyword-post",
+      url: "https://facebook.com/keyword-post",
+      text: "saving ".repeat(900),
+      publishedAt: null,
+      format: "image",
+      likes: null,
+      comments: 2,
+      shares: null,
+    };
+    for (const [id, status, date] of [
+      [older, "succeeded", "2026-11-17"],
+      [snapshot, "succeeded", "2026-11-18"],
+      [failed, "failed", "2026-11-19"],
+    ]) {
+      await pg.query(
+        "insert into social_research_snapshots(id,workspace_id,account_id,status,data,created_at,completed_at,connection_revision) values($1,$2,$3,$4,$5::jsonb,$6,$6,1)",
+        [
+          id,
+          workspaceId,
+          target.id,
+          status,
+          status === "succeeded"
+            ? JSON.stringify({ ...data, posts: [post] })
+            : null,
+          date,
+        ],
+      );
+    }
+    const filters = researchKeywordInputSchema.parse({ accountId: target.id });
+    const rows = await listResearchKeywordSamples(workspaceId, filters);
+    const sample = researchKeywordSampleSchema.parse(rows[0].sample);
+    expect(sample.snapshotId).toBe(snapshot);
+    expect(sample.posts[0].text.length).toBe(4000);
+    expect(sample.posts[0].textTruncated).toBe(true);
+    expect(await listResearchKeywordSamples(otherWorkspace, filters)).toEqual(
+      [],
+    );
+    const operation = randomUUID();
+    const result = {
+      source: { snapshotId: snapshot, postId: post.id },
+      findings: {
+        transcript: "factual speech",
+        observations: [{ evidence: "visible caption" }],
+        hypotheses: ["never extract inventedterm"],
+      },
+    };
+    for (const [id, workspace, status] of [
+      [operation, workspaceId, "succeeded"],
+      [randomUUID(), otherWorkspace, "succeeded"],
+      [randomUUID(), workspaceId, "failed"],
+    ])
+      await pg.query(
+        "insert into mcp_operations(id,workspace_id,kind,status,input,result) values($1,$2,'research_analysis',$3,$4::jsonb,$5::jsonb)",
+        [
+          id,
+          workspace,
+          status,
+          JSON.stringify({ accountId: target.id }),
+          JSON.stringify(result),
+        ],
+      );
+    const media = await listResearchKeywordMedia(workspaceId, [snapshot]);
+    expect(media).toHaveLength(1);
+    expect(media[0].media).toEqual({
+      operationId: operation,
+      snapshotId: snapshot,
+      postId: post.id,
+      transcript: "factual speech",
+      evidence: ["visible caption"],
+    });
+    expect(JSON.stringify(media)).not.toContain("inventedterm");
+    expect(await listResearchKeywordMedia(workspaceId, [older])).toEqual([]);
+    await archiveResearchAccount({
+      workspaceId,
+      accountId: target.id,
+      version: target.version,
+    });
+    expect(await listResearchKeywordSamples(workspaceId, filters)).toEqual([]);
+    expect(await listResearchKeywordMedia(workspaceId, [snapshot])).toEqual([]);
+  });
   it("projects bounded observation summaries without transferring saved post bodies", async () => {
     const row = await account("145"),
       operation = await claim(row.id);

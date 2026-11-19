@@ -1,5 +1,9 @@
 # VCStudio MCP v1 setup and verification
 
+## Saved keyword research — 19 November 2026
+
+MCP 1.4.1 adds the read-only `get_research_keywords` tool: 63 registered tools, 61 assistant-callable. It shares the Social keyword page's bounded saved-observation analysis, including optional reuse of completed transcripts/evidence, without starting a paid analysis. Existing Read consent/grants suffice; refresh tool discovery after release. No new OAuth scope, migration, environment or worker deployment is required. Live hashtag discovery remains unconfigured. See [keyword research](social-keyword-research.md).
+
 ## Research extension ? released 15 November 2026
 
 MCP 1.4.0 adds nine research tools (62 registered, 60 assistant-callable). Saved observations, captions, public metrics, descriptive comparisons and stored media-analysis findings are readable through MCP. Assistants can add watchlist identities, explicitly refresh, inspect transient media references and prepare/execute/poll actual image/carousel/video-with-audio analysis. URLs alone are never treated as proof that media was viewed. No browser automation is required for owner-enabled autonomous analysis. Manual analysis uses the signed-in browser review; embedded analysis approval is not claimed for this release. Existing generation/publication MCP Apps stay intact.
