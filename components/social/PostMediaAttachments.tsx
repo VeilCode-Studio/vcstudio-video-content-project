@@ -1,5 +1,7 @@
 "use client";
 
+import { useRef, useState } from "react";
+import { PostMediaViewer } from "./PostMediaViewer";
 import {
   ArrowLeftIcon,
   ArrowRightIcon,
@@ -32,6 +34,8 @@ export function PostMediaAttachments({
   onCheck: (assetId: string) => void;
   checkingId: string | null;
 }) {
+  const [previewIndex, setPreviewIndex] = useState<number | null>(null);
+  const previewTrigger = useRef<HTMLButtonElement | null>(null);
   if (attachments.length === 0)
     return (
       <p className="rounded-xl border border-dashed bg-muted/30 p-4 text-sm text-muted-foreground">
@@ -41,96 +45,121 @@ export function PostMediaAttachments({
     );
 
   return (
-    <ul className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-      {attachments.map((attachment, index) => (
-        <li className="space-y-1" key={attachment.asset.id}>
-          {attachment.asset.inspectionPending ||
-          attachment.asset.inspectionFailed ? (
-            <div
-              className="flex aspect-square items-center justify-center rounded-lg border bg-muted"
-              aria-label={`Video: ${attachment.asset.title}`}
+    <>
+      <ul className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        {attachments.map((attachment, index) => (
+          <li className="space-y-1" key={attachment.asset.id}>
+            <Button
+              variant="ghost"
+              type="button"
+              aria-label={`Preview ${attachment.asset.title}`}
+              aria-haspopup="dialog"
+              className="block h-auto w-full cursor-zoom-in rounded-lg p-0 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              onClick={(event) => {
+                previewTrigger.current = event.currentTarget;
+                setPreviewIndex(index);
+              }}
             >
-              <FilmIcon aria-hidden className="size-8 text-muted-foreground" />
-            </div>
-          ) : (
-            <MediaAssetPreview asset={attachment.asset} />
-          )}
-          <p className="truncate text-xs" title={attachment.asset.title}>
-            {attachment.asset.title}
-          </p>
-          {attachment.source === "render" ? (
-            <p className="text-xs text-muted-foreground">Project render</p>
-          ) : null}
-          {attachment.asset.inspectionPending ? (
-            <div className="space-y-1 text-xs text-amber-700 dark:text-amber-500">
-              <p>
-                Video verification in progress. Save the draft; publishing is
-                available after verification.
+              {attachment.asset.inspectionPending ||
+              attachment.asset.inspectionFailed ? (
+                <div
+                  className="flex aspect-square items-center justify-center rounded-lg border bg-muted"
+                  aria-label={`Video: ${attachment.asset.title}`}
+                >
+                  <FilmIcon
+                    aria-hidden
+                    className="size-8 text-muted-foreground"
+                  />
+                </div>
+              ) : (
+                <MediaAssetPreview asset={attachment.asset} controls={false} />
+              )}
+            </Button>
+            <p className="truncate text-xs" title={attachment.asset.title}>
+              {attachment.asset.title}
+            </p>
+            {attachment.source === "render" ? (
+              <p className="text-xs text-muted-foreground">Project render</p>
+            ) : null}
+            {attachment.asset.inspectionPending ? (
+              <div className="space-y-1 text-xs text-amber-700 dark:text-amber-500">
+                <p>
+                  Video verification in progress. Save the draft; publishing is
+                  available after verification.
+                </p>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  disabled={checkingId !== null}
+                  onClick={() => onCheck(attachment.asset.id)}
+                >
+                  {checkingId === attachment.asset.id ? (
+                    <>
+                      <Loader2Icon className="animate-spin" /> Checking…
+                    </>
+                  ) : (
+                    "Check status"
+                  )}
+                </Button>
+              </div>
+            ) : attachment.asset.inspectionFailed ? (
+              <p className="text-xs text-destructive">
+                Video verification failed. Remove this file and try another
+                upload.
               </p>
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                disabled={checkingId !== null}
-                onClick={() => onCheck(attachment.asset.id)}
-              >
-                {checkingId === attachment.asset.id ? (
-                  <>
-                    <Loader2Icon className="animate-spin" /> Checking…
-                  </>
-                ) : (
-                  "Check status"
-                )}
-              </Button>
-            </div>
-          ) : attachment.asset.inspectionFailed ? (
-            <p className="text-xs text-destructive">
-              Video verification failed. Remove this file and try another
-              upload.
-            </p>
-          ) : attachment.unavailable ? (
-            <p className="text-xs text-amber-700 dark:text-amber-500">
-              {attachment.source === "render"
-                ? "This render is no longer available — re-render before posting."
-                : "Removed from the library — still attached to this post."}
-            </p>
-          ) : null}
-          {editable ? (
-            <div className="flex gap-1">
-              <Button
-                aria-label={`Move ${attachment.asset.title} earlier`}
-                disabled={index === 0}
-                onClick={() => onMove(attachment.asset.id, -1)}
-                size="icon-xs"
-                type="button"
-                variant="ghost"
-              >
-                <ArrowLeftIcon />
-              </Button>
-              <Button
-                aria-label={`Move ${attachment.asset.title} later`}
-                disabled={index === attachments.length - 1}
-                onClick={() => onMove(attachment.asset.id, 1)}
-                size="icon-xs"
-                type="button"
-                variant="ghost"
-              >
-                <ArrowRightIcon />
-              </Button>
-              <Button
-                aria-label={`Remove ${attachment.asset.title}`}
-                className="ml-auto"
-                onClick={() => onRemove(attachment.asset.id)}
-                size="icon-xs"
-                type="button"
-                variant="ghost"
-              >
-                <XIcon />
-              </Button>
-            </div>
-          ) : null}
-        </li>
-      ))}
-    </ul>
+            ) : attachment.unavailable ? (
+              <p className="text-xs text-amber-700 dark:text-amber-500">
+                {attachment.source === "render"
+                  ? "This render is no longer available — re-render before posting."
+                  : "Removed from the library — still attached to this post."}
+              </p>
+            ) : null}
+            {editable ? (
+              <div className="flex gap-1">
+                <Button
+                  aria-label={`Move ${attachment.asset.title} earlier`}
+                  disabled={index === 0}
+                  onClick={() => onMove(attachment.asset.id, -1)}
+                  size="icon-xs"
+                  type="button"
+                  variant="ghost"
+                >
+                  <ArrowLeftIcon />
+                </Button>
+                <Button
+                  aria-label={`Move ${attachment.asset.title} later`}
+                  disabled={index === attachments.length - 1}
+                  onClick={() => onMove(attachment.asset.id, 1)}
+                  size="icon-xs"
+                  type="button"
+                  variant="ghost"
+                >
+                  <ArrowRightIcon />
+                </Button>
+                <Button
+                  aria-label={`Remove ${attachment.asset.title}`}
+                  className="ml-auto"
+                  onClick={() => onRemove(attachment.asset.id)}
+                  size="icon-xs"
+                  type="button"
+                  variant="ghost"
+                >
+                  <XIcon />
+                </Button>
+              </div>
+            ) : null}
+          </li>
+        ))}
+      </ul>
+      {previewIndex !== null && attachments[previewIndex] ? (
+        <PostMediaViewer
+          attachments={attachments}
+          initialIndex={previewIndex}
+          onClose={() => setPreviewIndex(null)}
+          returnFocus={previewTrigger}
+        />
+      ) : null}
+    </>
   );
 }

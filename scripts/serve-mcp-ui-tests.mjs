@@ -23,6 +23,7 @@ const selectedFixtures = process.env.MCP_UI_FIXTURES
   ? new Set(process.env.MCP_UI_FIXTURES.split(","))
   : null;
 for (const [name, entry] of [
+  ["post-media-viewer", "e2e/mcp/fixtures/post-media-viewer-entry.tsx"],
   ["research-keywords", "e2e/mcp/fixtures/research-keywords-entry.tsx"],
   ["research", "e2e/mcp/fixtures/research-entry.tsx"],
   ["harness", "e2e/mcp/fixtures/entry.tsx"],
@@ -188,7 +189,7 @@ for (const [name, entry] of [
   });
   await writeFile(
     path.join(out, `${name}.html`),
-    `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>${name === "research" || name === "post-composer" || name === "tiktok-connect" || name === "project-creation" || name === "project-form-alignment" || name === "facebook-selection" || name === "video-media" || name === "media-upload" || name === "media-library" || name === "elevenlabs-voice" ? applicationCss : css}</style><style>body{margin:0;padding:16px;min-width:0}</style></head><body><div id="root"></div><script type="module">${bundle.outputFiles[0].text.replace(/<\/script/gi, "<\\/script")}</script></body></html>`,
+    `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>${name === "post-media-viewer" || name === "research" || name === "post-composer" || name === "tiktok-connect" || name === "project-creation" || name === "project-form-alignment" || name === "facebook-selection" || name === "video-media" || name === "media-upload" || name === "media-library" || name === "elevenlabs-voice" ? applicationCss : css}</style><style>body{margin:0;padding:16px;min-width:0}</style></head><body><div id="root"></div><script type="module">${bundle.outputFiles[0].text.replace(/<\/script/gi, "<\\/script")}</script></body></html>`,
   );
 }
 const server = createServer(async (req, res) => {
@@ -228,6 +229,7 @@ const server = createServer(async (req, res) => {
     "/review.html": path.resolve("public/mcp/review.html"),
     "/generation.html": path.resolve("public/mcp/generation.html"),
     "/waitlist.html": path.join(out, "waitlist.html"),
+    "/post-media-viewer.html": path.join(out, "post-media-viewer.html"),
     "/post-composer.html": path.join(out, "post-composer.html"),
     "/operations.html": path.join(out, "operations.html"),
     "/application-error.html": path.join(out, "application-error.html"),

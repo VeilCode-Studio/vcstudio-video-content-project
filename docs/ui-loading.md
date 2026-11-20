@@ -45,3 +45,9 @@ Unit and mocked integration coverage checks query scoping, bounded signing, curs
 ## Research account selection
 
 Account/observation links use an authenticated workspace-scoped server action to read only the selected account and eleven observation rows (ten visible plus a sentinel). The watchlist, authorization panel and heading remain mounted with loading feedback confined to observations. Later selections invalidate slower responses. Failed reads preserve previous data and offer retry feedback. Successful reads update the URL/history, supporting deep links and Back/Forward. Viewers retain read access; disabled/signed-out requests never read observations. Selection does not call Meta or paid analysis.
+
+## Social post media viewer
+
+Post attachment tiles open a viewport-bounded shadcn Dialog and, for multiple attachments, the shadcn Embla carousel. Clicking opens the selected item; swipe, previous/next and arrow keys navigate without changing post attachment order. Only the active slide mounts its original image or native player, and leaving a slide or closing unmounts playback. Native player arrow keys keep their playback semantics. Gallery tiles use thumbnails; videos/audio retain `preload="none"`. Pending/failed inspection files cannot play. Images use contain fitting, and failed/expired links show retry guidance. Focus returns to the clicked attachment after closing.
+
+Verification (20 November 2026): 22 focused unit/integration tests and 18 distinct browser journeys passed, including a final nine-journey viewer rerun after the React external-store adaptation. Formatting, TypeScript, environment placement and the production build passed. Full lint passed with three existing warnings. Dependency audit reported 64 pre-existing project advisories (46 moderate, 18 high); no Embla advisory was reported. No migration, environment change or worker deployment is required.
