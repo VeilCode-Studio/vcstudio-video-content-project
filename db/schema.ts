@@ -5444,6 +5444,62 @@ export const sceneVisualSelections = pgTable(
 export type VideoGeneration = typeof videoGenerations.$inferSelect;
 export type SceneVisualSelection = typeof sceneVisualSelections.$inferSelect;
 
+export const libraryImageJobs = pgTable(
+  "library_image_jobs",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    workspaceId: uuid("workspace_id")
+      .notNull()
+      .references(() => workspaces.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "restrict" }),
+    idempotencyKey: text("idempotency_key").notNull(),
+    requestHash: text("request_hash").notNull(),
+    request: jsonb("request").$type<Record<string, unknown>>().notNull(),
+    plan: jsonb("plan").$type<Record<string, unknown>>().notNull(),
+    status: text("status")
+      .$type<import("@studio/contracts/image-studio").StudioImageStatus>()
+      .notNull()
+      .default("queued"),
+    estimatedCostCents: integer("estimated_cost_cents").notNull(),
+    actualCostCents: integer("actual_cost_cents"),
+    providerSubmitted: boolean("provider_submitted").notNull().default(false),
+    attemptCount: integer("attempt_count").notNull().default(0),
+    triggerRunId: text("trigger_run_id"),
+    providerRequestId: text("provider_request_id"),
+    usage: jsonb("usage").$type<Record<string, unknown>>(),
+    safeErrorMessage: text("safe_error_message"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => [
+    uniqueIndex("library_image_jobs_tenant_unique").on(t.id, t.workspaceId),
+    uniqueIndex("library_image_jobs_idempotency_unique").on(
+      t.workspaceId,
+      t.userId,
+      t.idempotencyKey,
+    ),
+    index("library_image_jobs_workspace_history").on(
+      t.workspaceId,
+      t.createdAt,
+    ),
+    index("library_image_jobs_status_updated").on(t.status, t.updatedAt),
+    check(
+      "library_image_jobs_state",
+      sql`${t.status} in ('queued','running','succeeded','failed')`,
+    ),
+    check(
+      "library_image_jobs_cost",
+      sql`${t.estimatedCostCents}>0 and (${t.actualCostCents} is null or ${t.actualCostCents}>=0) and ${t.attemptCount} between 0 and 1`,
+    ),
+  ],
+);
+
 export const usageReservations = pgTable(
   "usage_reservations",
   {
@@ -5479,6 +5535,7 @@ export const usageReservations = pgTable(
     clipGenerationId: uuid("clip_generation_id"),
     videoGenerationId: uuid("video_generation_id"),
     mediaGenerationOperationId: uuid("media_generation_operation_id"),
+    libraryImageJobId: uuid("library_image_job_id"),
     chapterGenerationId: uuid("chapter_generation_id").references(
       () => chapterGenerationRuns.id,
       { onDelete: "cascade" },
@@ -5509,6 +5566,14 @@ export const usageReservations = pgTable(
     uniqueIndex("usage_reservations_video_generation_unique")
       .on(table.videoGenerationId)
       .where(sql`${table.videoGenerationId} is not null`),
+    uniqueIndex("usage_reservations_library_image_unique")
+      .on(table.libraryImageJobId)
+      .where(sql`${table.libraryImageJobId} is not null`),
+    foreignKey({
+      columns: [table.libraryImageJobId, table.workspaceId],
+      foreignColumns: [libraryImageJobs.id, libraryImageJobs.workspaceId],
+      name: "usage_reservations_library_image_tenant_fkey",
+    }),
     uniqueIndex("usage_reservations_media_generation_unique")
       .on(table.mediaGenerationOperationId)
       .where(sql`${table.mediaGenerationOperationId} is not null`),
@@ -5564,7 +5629,7 @@ export const usageReservations = pgTable(
     ),
     check(
       "usage_reservations_single_operation",
-      sql`(((((${table.operationType}::text = 'scene_analysis' and ${table.analysisRunId} is not null and ${table.imageGenerationId} is null and ${table.audioGenerationId} is null and ${table.videoRenderId} is null and ${table.scriptGenerationId} is null and ${table.titleGenerationId} is null and ${table.thumbnailGenerationId} is null and ${table.clipGenerationId} is null and ${table.chapterGenerationId} is null) or (${table.operationType}::text = 'scene_image_generation' and ${table.analysisRunId} is null and ${table.imageGenerationId} is not null and ${table.audioGenerationId} is null and ${table.videoRenderId} is null and ${table.scriptGenerationId} is null and ${table.titleGenerationId} is null and ${table.thumbnailGenerationId} is null and ${table.clipGenerationId} is null and ${table.chapterGenerationId} is null) or (${table.operationType}::text = 'scene_audio_generation' and ${table.analysisRunId} is null and ${table.imageGenerationId} is null and ${table.audioGenerationId} is not null and ${table.videoRenderId} is null and ${table.scriptGenerationId} is null and ${table.titleGenerationId} is null and ${table.thumbnailGenerationId} is null and ${table.clipGenerationId} is null and ${table.chapterGenerationId} is null) or (${table.operationType}::text = 'video_render' and ${table.analysisRunId} is null and ${table.imageGenerationId} is null and ${table.audioGenerationId} is null and ${table.videoRenderId} is not null and ${table.scriptGenerationId} is null and ${table.titleGenerationId} is null and ${table.thumbnailGenerationId} is null and ${table.clipGenerationId} is null and ${table.chapterGenerationId} is null) or (${table.operationType}::text = 'script_generation' and ${table.analysisRunId} is null and ${table.imageGenerationId} is null and ${table.audioGenerationId} is null and ${table.videoRenderId} is null and ${table.scriptGenerationId} is not null and ${table.titleGenerationId} is null and ${table.thumbnailGenerationId} is null and ${table.clipGenerationId} is null and ${table.chapterGenerationId} is null) or (${table.operationType}::text = 'title_generation' and ${table.analysisRunId} is null and ${table.imageGenerationId} is null and ${table.audioGenerationId} is null and ${table.videoRenderId} is null and ${table.scriptGenerationId} is null and ${table.titleGenerationId} is not null and ${table.thumbnailGenerationId} is null and ${table.clipGenerationId} is null and ${table.chapterGenerationId} is null) or (${table.operationType}::text = 'thumbnail_generation' and ${table.analysisRunId} is null and ${table.imageGenerationId} is null and ${table.audioGenerationId} is null and ${table.videoRenderId} is null and ${table.scriptGenerationId} is null and ${table.titleGenerationId} is null and ${table.thumbnailGenerationId} is not null and ${table.clipGenerationId} is null and ${table.chapterGenerationId} is null) or (${table.operationType}::text = 'scene_video_generation' and ${table.analysisRunId} is null and ${table.imageGenerationId} is null and ${table.audioGenerationId} is null and ${table.videoRenderId} is null and ${table.scriptGenerationId} is null and ${table.titleGenerationId} is null and ${table.thumbnailGenerationId} is null and ${table.clipGenerationId} is not null and ${table.chapterGenerationId} is null) or (${table.operationType}::text = 'chapter_generation' and ${table.analysisRunId} is null and ${table.imageGenerationId} is null and ${table.audioGenerationId} is null and ${table.videoRenderId} is null and ${table.scriptGenerationId} is null and ${table.titleGenerationId} is null and ${table.thumbnailGenerationId} is null and ${table.clipGenerationId} is null and ${table.chapterGenerationId} is not null)) and ${table.videoGenerationId} is null and ${table.projectId} is not null) or (${table.operationType}::text = 'video_generation' and ${table.videoGenerationId} is not null and num_nonnulls(${table.analysisRunId}, ${table.imageGenerationId}, ${table.audioGenerationId}, ${table.videoRenderId}, ${table.scriptGenerationId}, ${table.titleGenerationId}, ${table.thumbnailGenerationId}, ${table.clipGenerationId}, ${table.chapterGenerationId}) = 0)) and ${table.mediaGenerationOperationId} is null) or (${table.operationType}::text in ('media_generation','research_analysis') and ${table.mediaGenerationOperationId} is not null and ${table.projectId} is null and num_nonnulls(${table.analysisRunId}, ${table.imageGenerationId}, ${table.audioGenerationId}, ${table.videoRenderId}, ${table.scriptGenerationId}, ${table.titleGenerationId}, ${table.thumbnailGenerationId}, ${table.clipGenerationId}, ${table.chapterGenerationId}, ${table.videoGenerationId}) = 0)`,
+      sql`((((((${table.operationType}::text = 'scene_analysis' and ${table.analysisRunId} is not null and ${table.imageGenerationId} is null and ${table.audioGenerationId} is null and ${table.videoRenderId} is null and ${table.scriptGenerationId} is null and ${table.titleGenerationId} is null and ${table.thumbnailGenerationId} is null and ${table.clipGenerationId} is null and ${table.chapterGenerationId} is null) or (${table.operationType}::text = 'scene_image_generation' and ${table.analysisRunId} is null and ${table.imageGenerationId} is not null and ${table.audioGenerationId} is null and ${table.videoRenderId} is null and ${table.scriptGenerationId} is null and ${table.titleGenerationId} is null and ${table.thumbnailGenerationId} is null and ${table.clipGenerationId} is null and ${table.chapterGenerationId} is null) or (${table.operationType}::text = 'scene_audio_generation' and ${table.analysisRunId} is null and ${table.imageGenerationId} is null and ${table.audioGenerationId} is not null and ${table.videoRenderId} is null and ${table.scriptGenerationId} is null and ${table.titleGenerationId} is null and ${table.thumbnailGenerationId} is null and ${table.clipGenerationId} is null and ${table.chapterGenerationId} is null) or (${table.operationType}::text = 'video_render' and ${table.analysisRunId} is null and ${table.imageGenerationId} is null and ${table.audioGenerationId} is null and ${table.videoRenderId} is not null and ${table.scriptGenerationId} is null and ${table.titleGenerationId} is null and ${table.thumbnailGenerationId} is null and ${table.clipGenerationId} is null and ${table.chapterGenerationId} is null) or (${table.operationType}::text = 'script_generation' and ${table.analysisRunId} is null and ${table.imageGenerationId} is null and ${table.audioGenerationId} is null and ${table.videoRenderId} is null and ${table.scriptGenerationId} is not null and ${table.titleGenerationId} is null and ${table.thumbnailGenerationId} is null and ${table.clipGenerationId} is null and ${table.chapterGenerationId} is null) or (${table.operationType}::text = 'title_generation' and ${table.analysisRunId} is null and ${table.imageGenerationId} is null and ${table.audioGenerationId} is null and ${table.videoRenderId} is null and ${table.scriptGenerationId} is null and ${table.titleGenerationId} is not null and ${table.thumbnailGenerationId} is null and ${table.clipGenerationId} is null and ${table.chapterGenerationId} is null) or (${table.operationType}::text = 'thumbnail_generation' and ${table.analysisRunId} is null and ${table.imageGenerationId} is null and ${table.audioGenerationId} is null and ${table.videoRenderId} is null and ${table.scriptGenerationId} is null and ${table.titleGenerationId} is null and ${table.thumbnailGenerationId} is not null and ${table.clipGenerationId} is null and ${table.chapterGenerationId} is null) or (${table.operationType}::text = 'scene_video_generation' and ${table.analysisRunId} is null and ${table.imageGenerationId} is null and ${table.audioGenerationId} is null and ${table.videoRenderId} is null and ${table.scriptGenerationId} is null and ${table.titleGenerationId} is null and ${table.thumbnailGenerationId} is null and ${table.clipGenerationId} is not null and ${table.chapterGenerationId} is null) or (${table.operationType}::text = 'chapter_generation' and ${table.analysisRunId} is null and ${table.imageGenerationId} is null and ${table.audioGenerationId} is null and ${table.videoRenderId} is null and ${table.scriptGenerationId} is null and ${table.titleGenerationId} is null and ${table.thumbnailGenerationId} is null and ${table.clipGenerationId} is null and ${table.chapterGenerationId} is not null)) and ${table.videoGenerationId} is null and ${table.projectId} is not null) or (${table.operationType}::text = 'video_generation' and ${table.videoGenerationId} is not null and num_nonnulls(${table.analysisRunId}, ${table.imageGenerationId}, ${table.audioGenerationId}, ${table.videoRenderId}, ${table.scriptGenerationId}, ${table.titleGenerationId}, ${table.thumbnailGenerationId}, ${table.clipGenerationId}, ${table.chapterGenerationId}) = 0)) and ${table.mediaGenerationOperationId} is null) or (${table.operationType}::text in ('media_generation','research_analysis') and ${table.mediaGenerationOperationId} is not null and ${table.projectId} is null and num_nonnulls(${table.analysisRunId}, ${table.imageGenerationId}, ${table.audioGenerationId}, ${table.videoRenderId}, ${table.scriptGenerationId}, ${table.titleGenerationId}, ${table.thumbnailGenerationId}, ${table.clipGenerationId}, ${table.chapterGenerationId}, ${table.videoGenerationId}) = 0)) and ${table.libraryImageJobId} is null or (${table.operationType}::text='media_generation' and ${table.libraryImageJobId} is not null and ${table.projectId} is null and num_nonnulls(${table.mediaGenerationOperationId},${table.analysisRunId},${table.imageGenerationId},${table.audioGenerationId},${table.videoRenderId},${table.scriptGenerationId},${table.titleGenerationId},${table.thumbnailGenerationId},${table.clipGenerationId},${table.chapterGenerationId},${table.videoGenerationId})=0)`,
     ),
     foreignKey({
       columns: [table.imageGenerationId, table.projectId, table.workspaceId],

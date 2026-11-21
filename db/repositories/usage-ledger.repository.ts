@@ -1,4 +1,5 @@
 import "server-only";
+import { z } from "zod";
 
 import { and, count, desc, eq, gte, inArray, lte } from "drizzle-orm";
 import { getDatabase } from "@/db/drizzle";
@@ -15,6 +16,7 @@ import {
   videoRenders,
   videoGenerations,
   mcpOperations,
+  libraryImageJobs,
 } from "@/db/schema";
 import { generationPreviewSchema } from "@studio/contracts/mcp-generation";
 import { calculatePagination } from "@/lib/domain/pagination";
@@ -89,7 +91,10 @@ export async function listUsageLedgerEntries(input: {
   const chapterIds: string[] = [];
   const videoIds: string[] = [];
   const mediaIds: string[] = [];
+  const libraryImageIds: string[] = [];
   for (const reservation of reservations) {
+    if (reservation.libraryImageJobId)
+      libraryImageIds.push(reservation.libraryImageJobId);
     if (reservation.mediaGenerationOperationId)
       mediaIds.push(reservation.mediaGenerationOperationId);
     if (reservation.videoGenerationId)
@@ -113,6 +118,41 @@ export async function listUsageLedgerEntries(input: {
   const enrichment = new Map<string, Enrichment>();
   const database = getDatabase();
   await Promise.all([
+    libraryImageIds.length === 0
+      ? Promise.resolve()
+      : database
+          .select()
+          .from(libraryImageJobs)
+          .where(
+            and(
+              eq(libraryImageJobs.workspaceId, input.workspaceId),
+              inArray(libraryImageJobs.id, libraryImageIds),
+            ),
+          )
+          .then((rows) => {
+            for (const row of rows) {
+              const plan = z
+                .object({ configuration: z.object({ model: z.string() }) })
+                .safeParse(row.plan);
+              enrichment.set(row.id, {
+                requestedByUserId: row.userId,
+                provider: "openai",
+                model: plan.success ? plan.data.configuration.model : null,
+                estimatedCostCents: row.estimatedCostCents,
+                inputUnits:
+                  typeof row.usage?.inputTextTokens === "number" &&
+                  typeof row.usage?.inputImageTokens === "number"
+                    ? row.usage.inputTextTokens + row.usage.inputImageTokens
+                    : null,
+                outputUnits:
+                  typeof row.usage?.outputTokens === "number"
+                    ? row.usage.outputTokens
+                    : null,
+                providerRequestId: row.providerRequestId,
+                workflowRunId: row.triggerRunId,
+              });
+            }
+          }),
     mediaIds.length === 0
       ? Promise.resolve()
       : database
@@ -454,6 +494,7 @@ export async function listUsageLedgerEntries(input: {
 
   const items: UsageLedgerEntry[] = reservations.map((reservation) => {
     const operationId =
+      reservation.libraryImageJobId ??
       reservation.mediaGenerationOperationId ??
       reservation.analysisRunId ??
       reservation.imageGenerationId ??

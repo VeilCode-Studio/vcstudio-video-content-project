@@ -11,7 +11,10 @@ export function MediaDownloadButton({
   postId,
   unavailable = false,
 }: {
-  asset: MediaAssetView;
+  asset: Pick<
+    MediaAssetView,
+    "id" | "title" | "inspectionPending" | "inspectionFailed"
+  >;
   source?: "library" | "render";
   postId?: string;
   unavailable?: boolean;

@@ -11,6 +11,7 @@ import {
   Settings,
   UsersIcon,
   Clapperboard,
+  ImageIcon,
 } from "lucide-react";
 import { SidebarLink } from "@/components/application/SidebarLink";
 import { usePathname } from "next/navigation";
@@ -165,6 +166,16 @@ export function ApplicationSidebar({
                 >
                   <FolderKanban />
                   <span>Projects</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  isActive={pathname.startsWith("/app/images")}
+                  render={<SidebarLink href="/app/images" />}
+                  tooltip="Image Studio"
+                >
+                  <ImageIcon />
+                  <span>Image Studio</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>

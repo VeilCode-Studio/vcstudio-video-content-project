@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "exports": {
+    "./image-studio": "./src/image-studio.ts",
     "./media-download": "./src/media-download.ts",
     ".": "./src/mcp.ts",
     "./video": "./src/video.ts",

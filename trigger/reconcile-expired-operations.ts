@@ -1,3 +1,4 @@
+import { recoverLibraryImages } from "@/lib/image-studio/worker";
 import { logger, schedules } from "@trigger.dev/sdk";
 import { failSceneAudioGeneration } from "@/db/commands/scene-audio-commands";
 import { releaseExpiredMarketingReservation } from "@/db/commands/marketing-usage-commands";
@@ -171,8 +172,10 @@ export const reconcileExpiredOperationsTask = schedules.task({
 
       const mcp = await recoverMcpOperations();
       const video = await recoverVideoOperations();
+      const libraryImages = await recoverLibraryImages();
       const result = {
         video,
+        libraryImages,
         mcp,
         imageCount,
         audioCount,

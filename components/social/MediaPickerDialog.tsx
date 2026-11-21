@@ -45,7 +45,7 @@ export function MediaPickerDialog({
   recentAssets: MediaAssetView[];
   onConfirm: (assets: MediaAssetView[]) => Promise<MediaPickerSaveResult>;
   kind?: "image" | "video";
-  selectionLimit?: 1;
+  selectionLimit?: number;
   triggerLabel?: string;
   title?: string;
   description?: string;
@@ -66,6 +66,15 @@ export function MediaPickerDialog({
 
   function toggle(assetId: string) {
     if (saveInFlight.current) return;
+    if (
+      selectionLimit !== undefined &&
+      selectionLimit > 1 &&
+      !selectedIds.includes(assetId) &&
+      selectedIds.length >= selectionLimit
+    ) {
+      setSaveError(`Choose at most ${selectionLimit} files.`);
+      return;
+    }
     setSaveError(null);
     setSelectedIds((current) =>
       current.includes(assetId)
