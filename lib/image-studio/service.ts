@@ -13,6 +13,7 @@ import { requireCapability } from "@/lib/policies/workspace-policy";
 import {
   getPublishingWebEnvironment,
   getSceneImageEnvironment,
+  getMediaLibraryEnvironment,
 } from "@/lib/env/server";
 import {
   createOAuthState,
@@ -226,5 +227,7 @@ export function imageStudioOptions() {
       env.OPENAI_IMAGE_MODEL.startsWith("gpt-image-"),
     model: env.OPENAI_IMAGE_MODEL,
     maxReferences: Math.min(16, env.MAX_REFERENCE_ASSETS_PER_GENERATION),
+    maxReferenceBytes: env.MAX_REFERENCE_BYTES_PER_GENERATION,
+    maxImageBytes: getMediaLibraryEnvironment().MAX_MEDIA_IMAGE_BYTES,
   };
 }

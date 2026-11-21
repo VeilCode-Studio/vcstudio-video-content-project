@@ -21,6 +21,8 @@ export function useMediaUploadQueue(input: {
   workspaceId: string;
   onUploaded: (assets: MediaAssetView[]) => void;
   onProcessing?: (assets: MediaAssetView[]) => void;
+  validateFiles?: (files: File[]) => string | null;
+  onBusyChange?: (busy: boolean) => void;
 }) {
   const busy = useRef(false);
   const [active, setActive] = useState<ActiveMediaUpload | null>(null);
@@ -30,6 +32,11 @@ export function useMediaUploadQueue(input: {
 
   async function uploadAll(files: File[]) {
     if (files.length === 0 || busy.current) return;
+    const validationError = input.validateFiles?.(files);
+    if (validationError) {
+      setFailures([{ fileName: "Selected files", message: validationError }]);
+      return;
+    }
     busy.current = true;
     setFailures([]);
     setProcessingCount(0);
@@ -37,6 +44,7 @@ export function useMediaUploadQueue(input: {
     const uploaded: MediaAssetView[] = [];
     const processing: MediaAssetView[] = [];
     try {
+      input.onBusyChange?.(true);
       for (const [index, file] of files.entries()) {
         const current = {
           fileName: file.name,
@@ -79,6 +87,7 @@ export function useMediaUploadQueue(input: {
     } finally {
       busy.current = false;
       setActive(null);
+      input.onBusyChange?.(false);
     }
   }
 

@@ -10,7 +10,8 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { FormSelect } from "@/components/ui/FormSelect";
 import { SelectItem } from "@/components/ui/select";
-import { MediaPickerDialog } from "@/components/social/MediaPickerDialog";
+import { ImageStudioReferences } from "./ImageStudioReferences";
+import type { ImageReferenceLimits } from "@/lib/image-studio/reference-selection";
 import type { MediaAssetView } from "@/lib/media/media-asset-view";
 import type {
   StudioImageJob,
@@ -30,7 +31,7 @@ export function ImageStudioPage({
   initialJobs,
 }: {
   workspaceId: string;
-  options: { enabled: boolean; model: string; maxReferences: number };
+  options: ImageReferenceLimits & { enabled: boolean; model: string };
   canGenerate: boolean;
   initialJobs: StudioImageJob[];
 }) {
@@ -38,6 +39,7 @@ export function ImageStudioPage({
     [prompt, setPrompt] = useState(""),
     [size, setSize] = useState<StudioImageRequest["size"]>("1024x1024"),
     [quality, setQuality] = useState<StudioImageRequest["quality"]>("medium");
+  const [uploading, setUploading] = useState(false);
   const [references, setReferences] = useState<MediaAssetView[]>([]);
   const [review, setReview] = useState<{
     token: string;
@@ -176,7 +178,7 @@ export function ImageStudioPage({
       setBusy(false);
     }
   }
-  const disabled = busy || !canGenerate || !options.enabled;
+  const disabled = busy || uploading || !canGenerate || !options.enabled;
   return (
     <div className="app-page font-[family-name:var(--font-geist-sans,Arial,sans-serif)]">
       <header className="app-page-header">
@@ -286,63 +288,20 @@ export function ImageStudioPage({
               </FormSelect>
             </div>
           </div>
-          <div className="space-y-2">
-            <MediaPickerDialog
-              title="Image references"
-              description="Select PNG, JPEG or WebP originals to guide this image, then use your selection."
-              triggerLabel="Choose reference images"
-              confirmLabel="Use references"
-              confirmDescription="The selected originals guide the generated image."
-              recentAssets={[]}
-              attachedIds={[]}
-              disabled={disabled || options.maxReferences < 1}
-              kind="image"
-              selectionLimit={options.maxReferences}
-              onConfirm={async (assets) => {
-                if (
-                  assets.some(
-                    (a) =>
-                      !["image/png", "image/jpeg", "image/webp"].includes(
-                        a.contentType,
-                      ),
-                  )
-                )
-                  return {
-                    ok: false,
-                    error: "Choose PNG, JPEG or WebP reference images.",
-                  };
-                setReferences(assets);
-                changed();
-                return { ok: true };
-              }}
-            />
-            <div className="flex flex-wrap gap-2">
-              {references.map((asset) => (
-                <Badge
-                  variant="secondary"
-                  className="h-auto max-w-full rounded-xl py-1"
-                  key={asset.id}
-                >
-                  <span className="min-w-0 truncate">{asset.title}</span>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="xs"
-                    disabled={disabled}
-                    aria-label={"Remove reference " + asset.title}
-                    onClick={() => {
-                      setReferences((items) =>
-                        items.filter((a) => a.id !== asset.id),
-                      );
-                      changed();
-                    }}
-                  >
-                    Remove
-                  </Button>
-                </Badge>
-              ))}
-            </div>
-          </div>
+          <ImageStudioReferences
+            workspaceId={workspaceId}
+            references={references}
+            limits={options}
+            disabled={disabled}
+            onChange={(assets) => {
+              setReferences(assets);
+              changed();
+            }}
+            onBusyChange={(active) => {
+              setUploading(active);
+              if (active) changed();
+            }}
+          />
           {error ? (
             <p
               role="alert"

@@ -9,6 +9,8 @@ export function ImageStudioHarness() {
         enabled: mode !== "disabled",
         model: "gpt-image-1",
         maxReferences: 2,
+        maxReferenceBytes: 20 * 1024 * 1024,
+        maxImageBytes: 25 * 1024 * 1024,
       }}
       initialJobs={[]}
     />

@@ -53,6 +53,7 @@ vi.mock("@/lib/storage/media-asset-storage", () => ({
   createMediaAssetDownloadUrl: m.url,
 }));
 vi.mock("@/lib/env/server", () => ({
+  getMediaLibraryEnvironment: () => ({ MAX_MEDIA_IMAGE_BYTES: 26214400 }),
   getPublishingWebEnvironment: () => ({
     OAUTH_STATE_SECRET: "test-only-secret-at-least-thirty-two-characters",
   }),

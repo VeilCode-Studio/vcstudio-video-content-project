@@ -10,6 +10,7 @@ export default async function ImagesPage() {
   if (!ctx) return null;
   return (
     <ImageStudioPage
+      key={ctx.activeMembership.workspaceId}
       workspaceId={ctx.activeMembership.workspaceId}
       options={imageStudioOptions()}
       canGenerate={can(ctx.activeMembership.role, "generateSceneImages")}
