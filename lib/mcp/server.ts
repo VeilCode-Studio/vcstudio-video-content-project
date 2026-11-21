@@ -1,3 +1,4 @@
+import { isSocialPostPlatformConfigured } from "@/lib/publishing/social-post-registry";
 import "server-only";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
@@ -204,6 +205,7 @@ export function createVcStudioMcpServer(principal: McpPrincipal) {
       features: {
         imports: true,
         sceneImageReuse: true,
+        pinterestPublishing: isSocialPostPlatformConfigured("pinterest"),
         socialPublishing: getPublishingEnvironment().ENABLE_SOCIAL_POSTING,
         marketing: false,
         socialResearch: isSocialResearchEnabled(),

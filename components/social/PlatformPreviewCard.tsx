@@ -30,9 +30,11 @@ const TONE_ICONS = {
 export function PlatformPreviewCard({
   eligibility,
   plainText,
+  accountName,
 }: {
   eligibility: PlatformEligibility;
   plainText: string;
+  accountName?: string;
 }) {
   const capability = getPlatformPostCapability(eligibility.platform);
   const label = CONTENT_PLATFORM_LABELS[eligibility.platform];
@@ -43,7 +45,10 @@ export function PlatformPreviewCard({
   return (
     <article className="space-y-2 rounded-xl border p-3">
       <header className="flex items-center justify-between gap-2">
-        <h3 className="text-sm font-medium">{label}</h3>
+        <h3 className="text-sm font-medium">
+          {label}
+          {accountName ? ` - ${accountName}` : ""}
+        </h3>
         <span
           className={`text-xs tabular-nums ${
             overLimit ? toneClassName("warning") : "text-muted-foreground"

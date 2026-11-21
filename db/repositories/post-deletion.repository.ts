@@ -10,6 +10,8 @@ function unsharedMedia(postId: string) {
     not exists(select 1 from social_post_media r where r.workspace_id=a.workspace_id and r.media_asset_id=a.id and r.post_id<>${postId}::uuid)
     and not exists(select 1 from social_posts r where r.workspace_id=a.workspace_id and r.youtube_thumbnail_asset_id=a.id and r.id<>${postId}::uuid)
     and not exists(select 1 from social_post_targets r where r.workspace_id=a.workspace_id and r.youtube_thumbnail_asset_id=a.id and r.post_id<>${postId}::uuid)
+    and not exists(select 1 from social_posts r cross join lateral jsonb_each(coalesce(r.pinterest_settings,'{}'::jsonb)) pin where r.workspace_id=a.workspace_id and r.id<>${postId}::uuid and pin.value->>'videoCoverAssetId'=a.id::text)
+    and not exists(select 1 from social_post_targets r where r.workspace_id=a.workspace_id and r.post_id<>${postId}::uuid and r.pinterest_settings->>'videoCoverAssetId'=a.id::text)
     and not exists(select 1 from project_render_effects r where r.workspace_id=a.workspace_id and r.background_media_asset_id=a.id)
     and not exists(select 1 from scene_visual_selections r where r.workspace_id=a.workspace_id and r.source_asset_id=a.id)
     and not exists(select 1 from video_generations r where r.workspace_id=a.workspace_id and (r.output_asset_id=a.id or r.request->'inputs' @> jsonb_build_array(jsonb_build_object('assetId',a.id::text))))
@@ -24,7 +26,9 @@ function candidates(workspaceId: string, postId: string) {
     select a.id from media_assets a
     where a.workspace_id=${workspaceId}::uuid and a.deleted_at is null
     and (exists(select 1 from social_post_media m where m.post_id=${postId}::uuid and m.workspace_id=${workspaceId}::uuid and m.media_asset_id=a.id)
-      or exists(select 1 from social_posts p where p.id=${postId}::uuid and p.workspace_id=${workspaceId}::uuid and p.youtube_thumbnail_asset_id=a.id))
+      or exists(select 1 from social_posts p where p.id=${postId}::uuid and p.workspace_id=${workspaceId}::uuid and p.youtube_thumbnail_asset_id=a.id)
+      or exists(select 1 from social_posts p cross join lateral jsonb_each(coalesce(p.pinterest_settings,'{}'::jsonb)) pin where p.id=${postId}::uuid and p.workspace_id=${workspaceId}::uuid and pin.value->>'videoCoverAssetId'=a.id::text)
+      or exists(select 1 from social_post_targets t where t.post_id=${postId}::uuid and t.workspace_id=${workspaceId}::uuid and t.pinterest_settings->>'videoCoverAssetId'=a.id::text))
     and ${unsharedMedia(postId)}
   `;
 }
@@ -48,8 +52,13 @@ export async function getPostDeletionPreview(input: {
     can_delete: boolean;
   }>(sql`
     select p.id,p.name,p.version,p.status::text,
-      ((select count(*) from social_post_media m where m.post_id=p.id and m.workspace_id=p.workspace_id)
-       + case when p.youtube_thumbnail_asset_id is not null and not exists(select 1 from social_post_media m where m.post_id=p.id and m.media_asset_id=p.youtube_thumbnail_asset_id) then 1 else 0 end)::int as media_count,
+      (select count(distinct item.id)::int from (
+        select m.media_asset_id::text as id from social_post_media m where m.post_id=p.id and m.workspace_id=p.workspace_id
+        union all select m.render_id::text from social_post_media m where m.post_id=p.id and m.workspace_id=p.workspace_id
+        union all select p.youtube_thumbnail_asset_id::text
+        union all select pin.value->>'videoCoverAssetId' from jsonb_each(coalesce(p.pinterest_settings,'{}'::jsonb)) pin
+        union all select t.pinterest_settings->>'videoCoverAssetId' from social_post_targets t where t.post_id=p.id and t.workspace_id=p.workspace_id
+      ) item) as media_count,
       (select count(*)::int from (${candidates(input.workspaceId, input.postId)}) removable) as removable_media_count,
       (${canDeletePost()}) as can_delete
     from social_posts p where p.id=${input.postId}::uuid and p.workspace_id=${input.workspaceId}::uuid limit 1

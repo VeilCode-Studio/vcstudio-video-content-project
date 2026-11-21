@@ -20,6 +20,20 @@ const keysByFile = new Map(
 const rules = {
   ...Object.fromEntries(
     [
+      "ENABLE_PINTEREST",
+      "PINTEREST_ACCESS_TIER",
+      "PINTEREST_API_ID",
+      "PINTEREST_API_SECRET",
+    ].map((key) => [
+      key,
+      {
+        required: [".env.example", ".env", ".env.vercel", ".env.trigger"],
+        forbidden: [],
+      },
+    ]),
+  ),
+  ...Object.fromEntries(
+    [
       "ENABLE_RESEARCH_MEDIA_ANALYSIS",
       "RESEARCH_ANALYSIS_MODEL",
       "RESEARCH_ANALYSIS_INPUT_COST_PER_MILLION_CENTS",

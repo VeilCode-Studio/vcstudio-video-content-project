@@ -1,3 +1,4 @@
+import { PinterestSettingsError } from "@/lib/publishing/pinterest-boards";
 import "server-only";
 import { saveSocialPostSchema } from "@/lib/schemas/social-post";
 import { findDraftAttachableMediaAssets } from "@/db/repositories/media-assets.repository";
@@ -20,6 +21,43 @@ export async function saveAuthorizedSocialDraft(
 ) {
   requireCapability(context.role, "composePosts");
   const input = saveSocialPostSchema.parse(raw);
+  if (input.pinterestSettings) {
+    const destinationIds = Object.keys(input.pinterestSettings);
+    const destinations = await findSocialPostDestinationConnections({
+      workspaceId: context.workspaceId,
+      connectionIds: destinationIds,
+    });
+    if (
+      destinations.length !== destinationIds.length ||
+      destinations.some((item) => item.platform !== "pinterest")
+    )
+      throw new SocialDraftDestinationError();
+    const coverIds = [
+      ...new Set(
+        Object.values(input.pinterestSettings).flatMap((settings) =>
+          settings.videoCoverAssetId ? [settings.videoCoverAssetId] : [],
+        ),
+      ),
+    ];
+    const covers = coverIds.length
+      ? await findReadyMediaAssets({
+          workspaceId: context.workspaceId,
+          mediaAssetIds: coverIds,
+        })
+      : [];
+    if (
+      covers.length !== coverIds.length ||
+      covers.some(
+        (cover) =>
+          cover.kind !== "image" ||
+          !["image/jpeg", "image/png"].includes(cover.contentType) ||
+          cover.sizeBytes > 20 * 1024 * 1024,
+      )
+    )
+      throw new PinterestSettingsError(
+        "Pinterest covers must be ready JPEG/PNG images up to 20 MB from this workspace.",
+      );
+  }
   if (input.youtubeThumbnailAssetId) {
     const [thumbnail] = await findReadyMediaAssets({
       workspaceId: context.workspaceId,

@@ -1,3 +1,5 @@
+import { PinterestSettingsError } from "@/lib/publishing/pinterest-boards";
+import { PublishProviderError } from "@/lib/publishing/video-publish-provider";
 import { ElevenLabsPresetError } from "@/lib/elevenlabs/errors";
 import { ElevenLabsUnavailableError } from "@/lib/elevenlabs/configuration";
 import { ElevenLabsApiError } from "@/lib/elevenlabs/client";
@@ -25,6 +27,12 @@ export function toolResult(data: unknown): CallToolResult {
   };
 }
 export function toolError(error: unknown): CallToolResult {
+  if (error instanceof PinterestSettingsError)
+    return toolError(new McpError("invalid_input", error.message));
+  if (error instanceof PublishProviderError)
+    return toolError(
+      new McpError("provider_unavailable", error.failure.safeMessage),
+    );
   if (error instanceof ElevenLabsPresetError)
     return toolError(new McpError("invalid_input", error.message));
   if (

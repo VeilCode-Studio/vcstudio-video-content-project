@@ -12,6 +12,7 @@ import type { ContentPlatform } from "@/db/schema";
  * the server-side callers that already import it from there.
  */
 export const CONTENT_PLATFORM_LABELS: Record<ContentPlatform, string> = {
+  pinterest: "Pinterest",
   youtube: "YouTube",
   tiktok: "TikTok",
   facebook: "Facebook",

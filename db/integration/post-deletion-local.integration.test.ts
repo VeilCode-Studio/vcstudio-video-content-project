@@ -32,9 +32,9 @@ const input = {
 beforeAll(async () => {
   await pg.exec(`
     create table media_assets(id uuid primary key,workspace_id uuid not null,deleted_at timestamptz,updated_at timestamptz default now());
-    create table social_posts(id uuid primary key,workspace_id uuid not null,name text default 'Test post',version int default 3,status text default 'draft',mcp_operation_id uuid,youtube_thumbnail_asset_id uuid references media_assets(id));
+    create table social_posts(id uuid primary key,workspace_id uuid not null,name text default 'Test post',version int default 3,status text default 'draft',mcp_operation_id uuid,pinterest_settings jsonb,youtube_thumbnail_asset_id uuid references media_assets(id));
     create table social_post_media(id uuid primary key,workspace_id uuid not null,post_id uuid references social_posts(id) on delete cascade,media_asset_id uuid references media_assets(id),render_id uuid);
-    create table social_post_targets(id uuid primary key,workspace_id uuid not null,post_id uuid references social_posts(id) on delete cascade,status text default 'pending',youtube_thumbnail_asset_id uuid references media_assets(id),youtube_thumbnail_status text);
+    create table social_post_targets(id uuid primary key,workspace_id uuid not null,post_id uuid references social_posts(id) on delete cascade,status text default 'pending',pinterest_settings jsonb,youtube_thumbnail_asset_id uuid references media_assets(id),youtube_thumbnail_status text);
     create table social_post_draft_destinations(id uuid primary key,post_id uuid references social_posts(id) on delete cascade);
     create table project_render_effects(workspace_id uuid,background_media_asset_id uuid);
     create table scene_visual_selections(workspace_id uuid,source_asset_id uuid);
@@ -234,6 +234,27 @@ describe("atomic post deletion on isolated PostgreSQL", () => {
     ).toMatchObject({ deleted: true, removedMediaIds: [] });
     expect(await mediaDeleted()).toBe(false);
   });
+  it("includes a Pinterest cover once and deletes it only after explicit media consent", async () => {
+    await pg.query(
+      "update social_posts set pinterest_settings=$1::jsonb where id=$2",
+      [
+        JSON.stringify({ [randomUUID()]: { videoCoverAssetId: assetId } }),
+        postId,
+      ],
+    );
+    expect(await getPostDeletionPreview(input)).toMatchObject({
+      mediaCount: 1,
+      removableMediaCount: 1,
+    });
+    await pg.query("delete from social_post_media where post_id=$1", [postId]);
+    expect(await getPostDeletionPreview(input)).toMatchObject({
+      mediaCount: 1,
+      removableMediaCount: 1,
+    });
+    expect(
+      await deleteSocialPostWithMedia({ ...input, deleteMedia: true }),
+    ).toMatchObject({ deleted: true, removedMediaIds: [assetId] });
+  });
   it("includes a distinct custom YouTube thumbnail, without double counting an attachment", async () => {
     await pg.query(
       "update social_posts set youtube_thumbnail_asset_id=$1 where id=$2",
@@ -253,6 +274,8 @@ describe("atomic post deletion on isolated PostgreSQL", () => {
     ).toMatchObject({ deleted: true, removedMediaIds: [assetId] });
   });
   it.each([
+    "pinterest_draft_cover",
+    "pinterest_target_cover",
     "post_thumbnail",
     "target_thumbnail",
     "background_audio",
@@ -264,6 +287,26 @@ describe("atomic post deletion on isolated PostgreSQL", () => {
     "marketing_content",
   ])("keeps media referenced as %s", async (reference) => {
     switch (reference) {
+      case "pinterest_draft_cover":
+        await pg.query(
+          "update social_posts set pinterest_settings=$1::jsonb where id=$2",
+          [
+            JSON.stringify({ [randomUUID()]: { videoCoverAssetId: assetId } }),
+            otherPostId,
+          ],
+        );
+        break;
+      case "pinterest_target_cover":
+        await pg.query(
+          "insert into social_post_targets(id,workspace_id,post_id,pinterest_settings) values($1,$2,$3,$4::jsonb)",
+          [
+            randomUUID(),
+            workspace,
+            otherPostId,
+            JSON.stringify({ videoCoverAssetId: assetId }),
+          ],
+        );
+        break;
       case "post_thumbnail":
         await pg.query(
           "update social_posts set youtube_thumbnail_asset_id=$1 where id=$2",

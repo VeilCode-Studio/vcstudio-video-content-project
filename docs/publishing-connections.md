@@ -101,3 +101,7 @@ Provider contracts were checked against [API permissions](https://learn.microsof
 ## Verification
 
 Use mocked database, authentication, and provider requests. Cover all six platforms through the real OAuth registry, missing provider configuration, decryption/revocation failures, local persistence failures, owner permissions, workspace scoping, confirmation cancellation, duplicate submissions, and retry behavior. Do not disconnect a production account merely to test the dialog. Keep Marketing Studio paused and do not start or deploy workers for verification.
+
+## Pinterest (approval pending)
+
+The Social/MCP Pin implementation is documented in [Pinterest publishing](pinterest-publishing.md). Account connection is owner-only and workspace scoped; reconnection preserves the external identity and local disconnect preserves delivery history. Pending developer approval, incomplete credentials or the disabled server switch leave the branded action unavailable. No live connection is claimed from an App ID alone. Pinterest boards and Pin metadata belong to Social drafts; project exports can be shared through that workflow.

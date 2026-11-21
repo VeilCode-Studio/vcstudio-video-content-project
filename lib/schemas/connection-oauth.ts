@@ -7,6 +7,7 @@ const connectionOAuthStatusSchema = z
 
 /** Only known, non-sensitive status codes may be shown or forwarded. */
 export const connectionOAuthQuerySchema = z.object({
+  pinterest: connectionOAuthStatusSchema.optional(),
   facebook: connectionOAuthStatusSchema,
   instagram: connectionOAuthStatusSchema,
   linkedin: connectionOAuthStatusSchema,

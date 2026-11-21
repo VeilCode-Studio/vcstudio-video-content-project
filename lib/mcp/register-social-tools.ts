@@ -1,3 +1,8 @@
+import {
+  pinterestPostSettingsSchema,
+  pinterestBoardQuerySchema,
+} from "@studio/contracts/publishing";
+import { listAuthorizedPinterestBoards } from "@/lib/publishing/pinterest-boards";
 import { z } from "zod";
 import { socialYouTubeSettingsSchema } from "@studio/contracts/publishing";
 import { socialPostConnectionIdsSchema } from "@studio/contracts";
@@ -25,6 +30,19 @@ import { mutateOnce } from "./operations";
 import type { McpToolRegistrar } from "./register-tool";
 
 export function registerSocialTools(register: McpToolRegistrar) {
+  register(
+    "get_pinterest_boards",
+    "List one page of public boards for an active Pinterest connection in the authorized workspace. Requires configured and approved Pinterest access. Use the returned board ID in save_post.pinterestSettings[connectionId]. Does not create boards or publish Pins.",
+    "vcstudio:read",
+    mcpWorkspaceInput.extend(pinterestBoardQuerySchema.shape),
+    true,
+    async (ctx, p) =>
+      listAuthorizedPinterestBoards(
+        { workspaceId: ctx.workspaceId, role: ctx.membership.role },
+        p,
+      ),
+  );
+
   register(
     "list_destinations",
     "List existing connected publishing accounts. This cannot authorize new accounts or enable paused features.",
@@ -116,6 +134,7 @@ export function registerSocialTools(register: McpToolRegistrar) {
         status: post.status,
         scheduledAt: post.scheduledAt,
         timezone: post.scheduledTimezone,
+        pinterestSettings: post.pinterestSettings,
         youtubeSettings: post.youtubeSettings,
         youtubeThumbnailAssetId: post.youtubeThumbnailAssetId,
         connectionIds,
@@ -133,6 +152,7 @@ export function registerSocialTools(register: McpToolRegistrar) {
           status: t.status,
           error: t.safeErrorMessage,
           externalPostUrl: t.externalPostUrl,
+          pinterestSettings: t.pinterestSettings,
           youtubeThumbnailStatus: t.youtubeThumbnailStatus,
           youtubeThumbnailError: t.youtubeThumbnailError,
           requiresTikTokCompletion: t.status === "inbox_delivered",
@@ -165,7 +185,7 @@ export function registerSocialTools(register: McpToolRegistrar) {
   );
   register(
     "save_post",
-    "Save exact post copy, library assets, destinations and optional youtubeSettings (title, description, tags, visibility, explicit madeForKids and containsSyntheticMedia). youtubeThumbnailAssetId selects a ready JPEG/PNG library image separately from the video attachment. Omit mediaAssetIds to preserve all current attachments, including project renders; [] clears attachments. Omit YouTube fields or connectionIds to preserve them; null clears YouTube settings/thumbnail and [] clears destinations. Never invent audience or AI declarations: ask the creator. Requires current version. Does not publish or schedule.",
+    "Save exact post copy, library assets, destinations and optional pinterestSettings keyed by connection ID (boardId, title, optional description, HTTPS link and videoCoverAssetId). Use get_pinterest_boards to choose a public board; video Pins require a ready JPEG/PNG cover asset. Omitted Pinterest settings are preserved; null clears them. Also accepts optional youtubeSettings (title, description, tags, visibility, explicit madeForKids and containsSyntheticMedia). youtubeThumbnailAssetId selects a ready JPEG/PNG library image separately from the video attachment. Omit mediaAssetIds to preserve all current attachments, including project renders; [] clears attachments. Omit YouTube fields or connectionIds to preserve them; null clears YouTube settings/thumbnail and [] clears destinations. Never invent audience or AI declarations: ask the creator. Requires current version. Does not publish or schedule.",
     "vcstudio:edit",
     mcpMutationInput.extend({
       postId: z.uuid(),
@@ -173,6 +193,7 @@ export function registerSocialTools(register: McpToolRegistrar) {
       name: z.string().max(120),
       text: z.string().max(20000),
       connectionIds: socialPostConnectionIdsSchema.optional(),
+      pinterestSettings: pinterestPostSettingsSchema.nullable().optional(),
       youtubeSettings: socialYouTubeSettingsSchema.nullable().optional(),
       youtubeThumbnailAssetId: z.uuid().nullable().optional(),
       mediaAssetIds: z
@@ -197,6 +218,7 @@ export function registerSocialTools(register: McpToolRegistrar) {
             postId: p.postId,
             expectedVersion: p.expectedVersion,
             connectionIds: p.connectionIds,
+            pinterestSettings: p.pinterestSettings,
             youtubeSettings: p.youtubeSettings,
             youtubeThumbnailAssetId: p.youtubeThumbnailAssetId,
             name: p.name,

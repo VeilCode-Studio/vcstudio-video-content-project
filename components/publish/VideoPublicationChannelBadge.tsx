@@ -2,6 +2,7 @@ import { Badge } from "@/components/ui/badge";
 import type { ContentPlatform } from "@/db/schema";
 
 const CHANNEL_CLASSNAMES: Record<ContentPlatform, string> = {
+  pinterest: "bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-200",
   youtube: "bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300",
   tiktok: "bg-zinc-200 text-zinc-800 dark:bg-zinc-800 dark:text-zinc-200",
   facebook: "bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300",

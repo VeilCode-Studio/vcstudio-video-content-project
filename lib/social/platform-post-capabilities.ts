@@ -53,11 +53,21 @@ export const SOCIAL_POST_PLATFORMS = [
   "instagram",
   "tiktok",
   "youtube",
+  "pinterest",
 ] as const satisfies readonly ContentPlatform[];
 
 export type SocialPostPlatform = (typeof SOCIAL_POST_PLATFORMS)[number];
 
 export const PLATFORM_POST_CAPABILITIES = {
+  pinterest: {
+    allowsTextOnly: false,
+    images: { min: 1, max: 1 },
+    allowsVideo: true,
+    requiresSingleMediaKind: true,
+    maxCharacters: 800,
+    mediaRequirement:
+      "Needs one image or video and a Pinterest board. Video Pins also need a cover image.",
+  },
   linkedin: {
     allowsTextOnly: true,
     images: { min: 1, max: 20 },

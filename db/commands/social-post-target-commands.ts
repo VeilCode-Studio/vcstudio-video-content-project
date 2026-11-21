@@ -1,3 +1,4 @@
+import type { PinterestPinSettings } from "@studio/contracts/publishing";
 import "server-only";
 
 import { and, eq, inArray, sql } from "drizzle-orm";
@@ -16,6 +17,7 @@ export async function createSocialPostTargets(input: {
     platform: ContentPlatform;
     connectionId: string;
     idempotencyKey: string;
+    pinterestSettings?: PinterestPinSettings | null;
     overrideBodyPlainText: string | null;
   }[];
 }): Promise<SocialPostTarget[]> {
@@ -29,6 +31,7 @@ export async function createSocialPostTargets(input: {
         platform: target.platform,
         connectionId: target.connectionId,
         idempotencyKey: target.idempotencyKey,
+        pinterestSettings: target.pinterestSettings ?? null,
         overrideBodyPlainText: target.overrideBodyPlainText,
         status: "pending" as const,
       })),
@@ -48,6 +51,7 @@ export async function replaceSocialPostTargets(input: {
     platform: ContentPlatform;
     connectionId: string;
     idempotencyKey: string;
+    pinterestSettings?: PinterestPinSettings | null;
     overrideBodyPlainText: string | null;
   }[];
 }): Promise<SocialPostTarget[]> {

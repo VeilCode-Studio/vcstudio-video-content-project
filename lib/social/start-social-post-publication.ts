@@ -1,3 +1,8 @@
+import {
+  validatePinterestPost,
+  PinterestSettingsError,
+} from "./validate-pinterest-post";
+import type { PinterestPinSettings } from "@studio/contracts/publishing";
 import "server-only";
 import type { SocialYouTubeSettings } from "@studio/contracts/publishing";
 import {
@@ -126,6 +131,7 @@ export async function startSocialPostPublication(input: {
     connectionId: string;
     idempotencyKey: string;
     overrideBodyPlainText: string | null;
+    pinterestSettings: PinterestPinSettings | null;
     youtubeSettings: SocialYouTubeSettings | null;
     youtubeThumbnailAssetId: string | null;
   }[] = [];
@@ -166,6 +172,38 @@ export async function startSocialPostPublication(input: {
 
     const override = captionOverrides.get(connection.platform);
     const platformText = override ?? post.bodyPlainText;
+    let pinterestSettings: PinterestPinSettings | null = null;
+    if (connection.platform === "pinterest") {
+      try {
+        pinterestSettings = (
+          await validatePinterestPost({
+            media,
+            workspaceId: input.workspaceId,
+            connectionId,
+            settings: post.pinterestSettings?.[connectionId],
+            text: platformText,
+            hasVideo: attachments.videoCount > 0,
+          })
+        ).settings;
+      } catch (error) {
+        throw new SocialPostPublicationError(
+          error instanceof PinterestSettingsError
+            ? error.message
+            : "Check Pinterest board access and Pin settings.",
+        );
+      }
+      if (
+        media.some(
+          (item) =>
+            item.kind === "image" &&
+            (!["image/jpeg", "image/png"].includes(item.contentType) ||
+              item.sizeBytes > 20 * 1024 * 1024),
+        )
+      )
+        throw new SocialPostPublicationError(
+          "Pinterest images must be JPEG or PNG, up to 20 MB.",
+        );
+    }
     let youtubeSettings: SocialYouTubeSettings | null = null;
     if (connection.platform === "youtube") {
       try {
@@ -188,7 +226,11 @@ export async function startSocialPostPublication(input: {
     const eligibility = checkPlatformEligibility({
       platform: connection.platform,
       attachments,
-      plainTextLength: (youtubeSettings?.description ?? platformText).length,
+      plainTextLength: (
+        pinterestSettings?.description ??
+        youtubeSettings?.description ??
+        platformText
+      ).length,
     });
     if (!eligibility.eligible)
       throw new SocialPostPublicationError(eligibility.reason);
@@ -208,6 +250,7 @@ export async function startSocialPostPublication(input: {
         override !== undefined && override !== post.bodyPlainText
           ? override
           : null,
+      pinterestSettings,
       youtubeSettings,
       youtubeThumbnailAssetId:
         connection.platform === "youtube" ? post.youtubeThumbnailAssetId : null,
@@ -222,6 +265,7 @@ export async function startSocialPostPublication(input: {
           .update(platformText)
           .update(
             JSON.stringify({
+              pinterestSettings,
               youtubeSettings,
               thumbnail:
                 connection.platform === "youtube"

@@ -24,6 +24,10 @@ vi.mock("@/lib/env/server", () => ({
   getPublishingEnvironment: () => ({
     ENABLE_VIDEO_PUBLISHING: true,
     ENABLE_SOCIAL_POSTING: true,
+    PINTEREST_ACCESS_TIER: "trial",
+    ENABLE_PINTEREST: true,
+    PINTEREST_API_ID: "123",
+    PINTEREST_API_SECRET: "test",
   }),
   getPublishingWebEnvironment: () => ({
     APP_BASE_URL: "https://studio.example",
@@ -52,6 +56,7 @@ vi.mock("@/lib/publishing/facebook-oauth-session", () => ({
   createFacebookOAuthSession: () => "test-session",
 }));
 
+import { GET as pinterest } from "@/app/api/pinterest/callback/route";
 import { GET as youtube } from "@/app/api/youtube/callback/route";
 import { GET as facebook } from "@/app/api/facebook/callback/route";
 import { GET as instagram } from "@/app/api/instagram/callback/route";
@@ -74,6 +79,7 @@ beforeEach(() => {
 });
 
 describe.each([
+  { platform: "pinterest", GET: pinterest },
   { platform: "youtube", GET: youtube },
   { platform: "facebook", GET: facebook },
   { platform: "instagram", GET: instagram },

@@ -43,6 +43,7 @@ export class PlatformNotConfiguredError extends Error {
 }
 
 const PLATFORM_DISPLAY_NAMES: Record<ContentPlatform, string> = {
+  pinterest: "Pinterest",
   youtube: "YouTube",
   facebook: "Facebook",
   instagram: "Instagram",
@@ -173,6 +174,7 @@ export function createVideoPublishProvider(
     // are absent from PUBLISHABLE_PLATFORMS and can never reach this function
     // via `startVideoPublication`. Handled explicitly so the exhaustiveness
     // guard below keeps catching genuinely new platforms.
+    case "pinterest":
     case "linkedin":
     case "twitter":
       throw new UnsupportedPlatformError(platform);

@@ -1,3 +1,7 @@
+import {
+  validatePinterestPost,
+  PinterestSettingsError,
+} from "@/lib/social/validate-pinterest-post";
 import "server-only";
 import { randomBytes } from "node:crypto";
 import { z } from "zod";
@@ -243,6 +247,7 @@ export async function buildPublicationPreview(
     "inspection_pending",
     "Wait for every attachment to finish verification.",
   );
+  const pinterestCovers: PublicationPreview["media"] = [];
   const destinations = [];
   const previousTargets = await listSocialPostTargets({
     workspaceId: context.workspaceId,
@@ -287,7 +292,12 @@ export async function buildPublicationPreview(
       plainTextLength:
         connection.platform === "youtube"
           ? (post.youtubeSettings?.description ?? post.bodyPlainText).length
-          : post.bodyPlainText.length,
+          : connection.platform === "pinterest"
+            ? (
+                post.pinterestSettings?.[connection.id]?.description ??
+                post.bodyPlainText
+              ).length
+            : post.bodyPlainText.length,
     });
     requireMcp(
       eligibility.eligible,
@@ -310,6 +320,66 @@ export async function buildPublicationPreview(
       "incompatible_destination",
       "TikTok inbox delivery requires consent at send time and cannot be scheduled through MCP.",
     );
+    let pinterest;
+    if (connection.platform === "pinterest") {
+      const validated = await validatePinterestPost({
+        media,
+        workspaceId: context.workspaceId,
+        connectionId: connection.id,
+        settings: post.pinterestSettings?.[connection.id],
+        text: post.bodyPlainText,
+        hasVideo: media.some((item) => item.kind === "video"),
+      }).catch((error: unknown) => {
+        throw new McpError(
+          "invalid_input",
+          error instanceof PinterestSettingsError
+            ? error.message
+            : "Check Pinterest board access and Pin settings.",
+        );
+      });
+      requireMcp(
+        !media.some(
+          (item) =>
+            item.kind === "image" &&
+            (!["image/jpeg", "image/png"].includes(item.contentType) ||
+              item.sizeBytes > 20 * 1024 * 1024),
+        ),
+        "invalid_input",
+        "Pinterest images must be JPEG or PNG up to 20 MB.",
+      );
+      const cover = validated.cover;
+      if (
+        cover &&
+        !media.some((item) => item.sourceId === cover.id) &&
+        !pinterestCovers.some((item) => item.id === cover.id)
+      )
+        pinterestCovers.push({
+          id: cover.id,
+          name: cover.title || cover.originalFileName,
+          kind: "image",
+          contentType: cover.contentType,
+          sizeBytes: cover.sizeBytes,
+          etag: fingerprint({
+            key: cover.objectKey,
+            etag: await mcpObjectEtag(cover.objectKey),
+            size: cover.sizeBytes,
+          }),
+        });
+      pinterest = {
+        ...validated.settings,
+        cover: cover
+          ? {
+              id: cover.id,
+              name: cover.title || cover.originalFileName,
+              etag: fingerprint({
+                key: cover.objectKey,
+                etag: await mcpObjectEtag(cover.objectKey),
+                size: cover.sizeBytes,
+              }),
+            }
+          : null,
+      };
+    }
     let youtube;
     if (connection.platform === "youtube") {
       const validated = await validateYouTubePost({
@@ -349,6 +419,9 @@ export async function buildPublicationPreview(
       platform: connection.platform,
       name: connection.externalAccountName,
       text: post.bodyPlainText,
+      ...(pinterest
+        ? { pinterest, text: pinterest.description ?? post.bodyPlainText }
+        : {}),
       ...(youtube
         ? { youtube, text: youtube.description ?? post.bodyPlainText }
         : {}),
@@ -373,23 +446,26 @@ export async function buildPublicationPreview(
     postId: post.id,
     version: post.version,
     text: post.bodyPlainText,
-    media: await Promise.all(
-      media.map(async (a) => ({
-        id: a.sourceId,
-        name: a.title,
-        kind: a.kind,
-        contentType: a.contentType,
-        sizeBytes: a.sizeBytes,
-        etag: fingerprint({
-          etag: await mcpObjectEtag(a.objectKey),
-          objectKey: a.objectKey,
-          size: a.sizeBytes,
-          title: a.title,
-          alt: a.altText,
-          verified: assets.find((v) => v.id === a.sourceId)?.verifiedMetadata,
-        }),
-      })),
-    ),
+    media: [
+      ...pinterestCovers,
+      ...(await Promise.all(
+        media.map(async (a) => ({
+          id: a.sourceId,
+          name: a.title,
+          kind: a.kind,
+          contentType: a.contentType,
+          sizeBytes: a.sizeBytes,
+          etag: fingerprint({
+            etag: await mcpObjectEtag(a.objectKey),
+            objectKey: a.objectKey,
+            size: a.sizeBytes,
+            title: a.title,
+            alt: a.altText,
+            verified: assets.find((v) => v.id === a.sourceId)?.verifiedMetadata,
+          }),
+        })),
+      )),
+    ],
     destinations,
     scheduledAt: input.scheduledAt
       ? new Date(input.scheduledAt).toISOString()

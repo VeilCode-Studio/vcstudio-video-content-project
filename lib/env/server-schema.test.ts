@@ -184,6 +184,24 @@ describe("publishing environment validation", () => {
     }
   });
 
+  it("keeps incomplete Pinterest credentials valid but disables the pending app by default", () => {
+    const parsed = publishingEnvironmentSchema.parse({
+      ...base,
+      PINTEREST_API_ID: " 123456 ",
+      PINTEREST_API_SECRET: "",
+    });
+    expect(parsed).toMatchObject({
+      ENABLE_PINTEREST: false,
+      PINTEREST_ACCESS_TIER: "pending",
+      PINTEREST_API_ID: "123456",
+    });
+    expect(
+      publishingEnvironmentSchema.safeParse({
+        ...base,
+        PINTEREST_API_ID: "invalid app",
+      }).success,
+    ).toBe(false);
+  });
   it("still requires the token encryption key (needed by every platform)", () => {
     expect(publishingEnvironmentSchema.safeParse({}).success).toBe(false);
   });

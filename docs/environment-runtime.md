@@ -125,3 +125,7 @@ the sign-in, recording, upload, preview, and OAuth journeys have been checked.
 dashboard must query the heartbeat written by the matching worker deployment.
 Use `development` locally, `staging` in both staging runtimes, and `production`
 in both production runtimes. A mismatch truthfully appears as a missing worker.
+
+## Pinterest approval hold
+
+`ENABLE_PINTEREST`, `PINTEREST_ACCESS_TIER`, `PINTEREST_API_ID` and `PINTEREST_API_SECRET` are shared web/worker settings: OAuth and board reads run on the web, while scheduled Pin delivery and token rotation run in the existing worker. Defaults are `false` and `pending`. The existing supplied ID is preserved; the missing secret remains empty. Keep both runtimes disabled until Pinterest approves access and credentials are complete. Trial access creates Pins visible only to their creator. See [Pinterest setup](pinterest-publishing.md).

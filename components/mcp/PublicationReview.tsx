@@ -80,6 +80,38 @@ export function PublicationReview({
                   current permissions.
                 </p>
               )}
+              {d.pinterest ? (
+                <dl className="mt-3 space-y-2 text-sm">
+                  <div>
+                    <dt className="text-muted-foreground">Pinterest board</dt>
+                    <dd>
+                      {d.pinterest.boardName} ({d.pinterest.boardId})
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-muted-foreground">
+                      Pinterest app access
+                    </dt>
+                    <dd>
+                      {d.pinterest.accessTier === "trial"
+                        ? "Trial - Pins visible only to the creator"
+                        : "Standard - eligible for normal Pinterest visibility"}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-muted-foreground">Pin title</dt>
+                    <dd>{d.pinterest.title || "No title"}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-muted-foreground">Destination link</dt>
+                    <dd className="break-all">{d.pinterest.link || "None"}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-muted-foreground">Video cover</dt>
+                    <dd>{d.pinterest.cover?.name || "None"}</dd>
+                  </div>
+                </dl>
+              ) : null}
               {d.youtube && (
                 <YouTubePublicationDetails
                   youtube={d.youtube}

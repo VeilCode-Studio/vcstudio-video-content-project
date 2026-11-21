@@ -73,8 +73,8 @@ beforeAll(async () => {
     ),
   );
   await pg.exec(`
-    alter table social_posts add column youtube_settings jsonb, add column youtube_thumbnail_asset_id uuid;
-    alter table social_post_targets add column youtube_settings jsonb, add column youtube_thumbnail_asset_id uuid, add column youtube_thumbnail_status text, add column youtube_thumbnail_error text;
+    alter table social_posts add column pinterest_settings jsonb, add column youtube_settings jsonb, add column youtube_thumbnail_asset_id uuid;
+    alter table social_post_targets add column pinterest_settings jsonb, add column youtube_settings jsonb, add column youtube_thumbnail_asset_id uuid, add column youtube_thumbnail_status text, add column youtube_thumbnail_error text;
   `);
   await pg.exec(
     await readFile(

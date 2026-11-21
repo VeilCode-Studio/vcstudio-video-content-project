@@ -38,6 +38,7 @@ export type WorkspaceChannelsView = {
   /** Video publishing (YouTube/Facebook/Instagram/TikTok render uploads). */
   enabled: boolean;
   /** Social posting, which is what makes LinkedIn connectable at all. */
+  pinterestReady?: boolean;
   socialPostingEnabled: boolean;
   channels: WorkspaceChannelView[];
   platforms: WorkspaceChannelPlatformView[];
@@ -50,6 +51,7 @@ const PLATFORM_ORDER: readonly ContentPlatform[] = [
   "tiktok",
   "linkedin",
   "twitter",
+  "pinterest",
 ];
 
 function formatUtc(value: Date): string {
@@ -58,11 +60,13 @@ function formatUtc(value: Date): string {
 
 export function buildWorkspaceChannelsView(input: {
   enabled: boolean;
+  pinterestReady?: boolean;
   socialPostingEnabled: boolean;
   connections: PlatformConnectionSummary[];
 }): WorkspaceChannelsView {
   return {
     enabled: input.enabled,
+    pinterestReady: Boolean(input.pinterestReady),
     socialPostingEnabled: input.socialPostingEnabled,
     channels: input.connections
       .filter((connection) => connection.status !== "revoked")
@@ -81,12 +85,14 @@ export function buildWorkspaceChannelsView(input: {
         reconnectPath: getReconnectAuthorizePath(connection, {
           videoPublishingEnabled: input.enabled,
           socialPostingEnabled: input.socialPostingEnabled,
+          pinterestEnabled: input.pinterestReady,
         }),
       })),
     platforms: PLATFORM_ORDER.map((platform) => ({
       platform,
       label: CONTENT_PLATFORM_LABELS[platform],
-      available: true,
+      available:
+        platform === "pinterest" ? Boolean(input.pinterestReady) : true,
     })),
   };
 }
@@ -101,6 +107,13 @@ export async function loadWorkspaceChannelsView(input: {
   return buildWorkspaceChannelsView({
     enabled: environment.ENABLE_VIDEO_PUBLISHING,
     socialPostingEnabled: environment.ENABLE_SOCIAL_POSTING,
+    pinterestReady: Boolean(
+      environment.ENABLE_PINTEREST &&
+      environment.PINTEREST_ACCESS_TIER !== "pending" &&
+      environment.ENABLE_SOCIAL_POSTING &&
+      environment.PINTEREST_API_ID &&
+      environment.PINTEREST_API_SECRET,
+    ),
     connections,
   });
 }

@@ -71,3 +71,52 @@ export const tikTokSandboxCredentialsSchema = z.object({
 export type TikTokSandboxCredentials = z.infer<
   typeof tikTokSandboxCredentialsSchema
 >;
+
+/** One Pin destination. Omitted description uses the shared Social copy. */
+export const pinterestPinSettingsSchema = z.object({
+  accessTier: z.enum(["trial", "standard"]).optional(),
+  boardId: z
+    .string()
+    .regex(/^\d{1,32}$/)
+    .or(z.literal(""))
+    .default(""),
+  boardName: z.string().max(200).default(""),
+  title: z.string().trim().max(100).default(""),
+  description: z.string().max(800).nullable().default(null),
+  link: z
+    .url()
+    .max(2048)
+    .refine(
+      (value) => new URL(value).protocol === "https:",
+      "Use an HTTPS destination link.",
+    )
+    .nullable()
+    .default(null),
+  videoCoverAssetId: z.uuid().nullable().default(null),
+});
+export const pinterestPostSettingsSchema = z
+  .record(z.uuid(), pinterestPinSettingsSchema)
+  .refine(
+    (value) => Object.keys(value).length <= 20,
+    "Too many Pinterest destinations.",
+  );
+export type PinterestPinSettings = z.infer<typeof pinterestPinSettingsSchema>;
+export type PinterestPostSettings = z.infer<typeof pinterestPostSettingsSchema>;
+export const pinterestBoardQuerySchema = z.object({
+  connectionId: z.uuid(),
+  bookmark: z.string().max(2048).optional(),
+});
+export const pinterestBoardSchema = z.object({
+  id: z.string().regex(/^\d{1,32}$/),
+  name: z.string().min(1).max(200),
+  privacy: z.enum(["PUBLIC", "PROTECTED", "SECRET"]).optional(),
+});
+export type PinterestBoard = z.infer<typeof pinterestBoardSchema>;
+export type PinterestBoardPage = {
+  items: PinterestBoard[];
+  bookmark: string | null;
+};
+
+export const EMPTY_PINTEREST_PIN_SETTINGS = pinterestPinSettingsSchema.parse(
+  {},
+);

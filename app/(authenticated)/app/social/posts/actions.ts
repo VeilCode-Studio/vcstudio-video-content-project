@@ -1,4 +1,5 @@
 "use server";
+import { PinterestSettingsError } from "@/lib/publishing/pinterest-boards";
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -123,12 +124,16 @@ export async function saveSocialPostAction(
 ): Promise<SaveSocialPostResult> {
   let bodyDocument: unknown;
   let connectionIds: unknown;
+  let pinterestSettings: unknown;
   let youtubeSettings: unknown;
   try {
     bodyDocument = JSON.parse(String(formData.get("bodyDocument") ?? "null"));
     const destinations = formData.get("connectionIds");
     connectionIds =
       destinations === null ? undefined : JSON.parse(String(destinations));
+    const pinterest = formData.get("pinterestSettings");
+    pinterestSettings =
+      pinterest === null ? undefined : JSON.parse(String(pinterest));
     const youtube = formData.get("youtubeSettings");
     youtubeSettings =
       youtube === null ? undefined : JSON.parse(String(youtube));
@@ -145,6 +150,7 @@ export async function saveSocialPostAction(
     name: formData.get("name") ?? "",
     bodyDocument,
     connectionIds,
+    pinterestSettings,
     youtubeSettings,
     youtubeThumbnailAssetId: formData.has("youtubeThumbnailAssetId")
       ? formData.get("youtubeThumbnailAssetId") || null
@@ -204,7 +210,8 @@ export async function saveSocialPostAction(
       ok: false,
       error:
         error instanceof SocialDraftDestinationError ||
-        error instanceof YouTubePostSettingsError
+        error instanceof YouTubePostSettingsError ||
+        error instanceof PinterestSettingsError
           ? error.message
           : "That post could not be saved.",
     };
@@ -251,7 +258,8 @@ export async function retryYouTubeThumbnailAction(
       ok: false,
       error:
         error instanceof YouTubeThumbnailRetryError ||
-        error instanceof YouTubePostSettingsError
+        error instanceof YouTubePostSettingsError ||
+        error instanceof PinterestSettingsError
           ? error.message
           : "The thumbnail retry could not be queued.",
     };

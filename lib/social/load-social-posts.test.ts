@@ -46,6 +46,7 @@ function post(index: number): SocialPost {
     bodyPlainText: "Caption",
     version: 1,
     mcpOperationId: null,
+    pinterestSettings: null,
     youtubeSettings: null,
     youtubeThumbnailAssetId: null,
     scheduledAt: null,

@@ -1,0 +1,2 @@
+ALTER TABLE "social_post_targets" ADD CONSTRAINT "social_targets_pinterest_settings" CHECK (("platform"::text = 'pinterest' and "pinterest_settings" is not null and jsonb_typeof("pinterest_settings") = 'object') or ("platform"::text <> 'pinterest' and "pinterest_settings" is null));--> statement-breakpoint
+ALTER TABLE "social_posts" ADD CONSTRAINT "social_posts_pinterest_settings_object" CHECK ("pinterest_settings" is null or jsonb_typeof("pinterest_settings") = 'object');

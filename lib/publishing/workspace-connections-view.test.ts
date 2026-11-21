@@ -107,6 +107,7 @@ describe("workspace channels view", () => {
       { platform: "tiktok", label: "TikTok", available: true },
       { platform: "linkedin", label: "LinkedIn", available: true },
       { platform: "twitter", label: "X", available: true },
+      { platform: "pinterest", label: "Pinterest", available: false },
     ]);
   });
 
@@ -133,5 +134,16 @@ describe("workspace channels view", () => {
     });
 
     expect(view.channels.map(({ id }) => id)).toEqual(["expired"]);
+  });
+  it("offers Pinterest only when the server resolves it ready", () => {
+    const view = buildWorkspaceChannelsView({
+      enabled: true,
+      socialPostingEnabled: true,
+      pinterestReady: true,
+      connections: [],
+    });
+    expect(
+      view.platforms.find((item) => item.platform === "pinterest"),
+    ).toMatchObject({ available: true });
   });
 });

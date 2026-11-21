@@ -1,4 +1,9 @@
 "use client";
+import { PinterestPostSettingsPanel } from "./PinterestPostSettingsPanel";
+import {
+  EMPTY_PINTEREST_PIN_SETTINGS,
+  type PinterestPostSettings,
+} from "@studio/contracts/publishing";
 
 import { useMemo, useRef, useState } from "react";
 import Link from "next/link";
@@ -60,6 +65,11 @@ export function PostComposer({
   view: SocialPostComposerView;
   workspaceId: string;
 }) {
+  const [pinterestCovers, setPinterestCovers] = useState<MediaAssetView[]>(
+    view.pinterestCovers ?? [],
+  );
+  const [pinterestSettings, setPinterestSettings] =
+    useState<PinterestPostSettings>(view.pinterestSettings ?? {});
   const [name, setName] = useState(view.name);
   const [document, setDocument] = useState<PortableDocument>(view.bodyDocument);
   const [attachments, setAttachments] = useState<PostAttachmentView[]>(
@@ -78,6 +88,7 @@ export function PostComposer({
   const [savedSnapshot, setSavedSnapshot] = useState(() => ({
     plainText: view.bodyPlainText,
     name: view.name,
+    pinterestKey: JSON.stringify(view.pinterestSettings ?? {}),
     youtubeKey: JSON.stringify({
       settings: socialYouTubeSettingsSchema.parse(view.youtubeSettings ?? {}),
       thumbnail: view.youtubeThumbnail?.id ?? null,
@@ -135,7 +146,8 @@ export function PostComposer({
     plainText !== savedSnapshot.plainText ||
     name !== savedSnapshot.name ||
     hasUnsavedMedia ||
-    hasUnsavedYouTube;
+    hasUnsavedYouTube ||
+    JSON.stringify(pinterestSettings) !== savedSnapshot.pinterestKey;
 
   async function save(
     nextAttachments = attachments,
@@ -157,6 +169,7 @@ export function PostComposer({
       data.set("bodyDocument", JSON.stringify(document));
       data.set("connectionIds", JSON.stringify(selectedConnectionIds));
       if (view.status !== "scheduled") {
+        data.set("pinterestSettings", JSON.stringify(pinterestSettings));
         data.set("youtubeSettings", JSON.stringify(youtubeSettings));
         data.set("youtubeThumbnailAssetId", youtubeThumbnail?.id ?? "");
       }
@@ -172,6 +185,7 @@ export function PostComposer({
         setSavedSnapshot({
           plainText,
           name,
+          pinterestKey: JSON.stringify(pinterestSettings),
           youtubeKey,
           attachmentKey: nextAttachments
             .map((item) => `${item.source}:${item.asset.id}`)
@@ -436,6 +450,7 @@ export function PostComposer({
 
         <aside className="space-y-3">
           <PublishPostPanel
+            pinterestSettings={pinterestSettings}
             attachmentSummary={attachmentSummary}
             basePlainText={plainText}
             canPublish={canPublish}
@@ -461,19 +476,81 @@ export function PostComposer({
               post right now.
             </p>
           </div>
-          {eligibility.map((entry) => (
-            <PlatformPreviewCard
-              eligibility={entry}
-              key={entry.platform}
-              plainText={
-                entry.platform === "youtube"
-                  ? (youtubeSettings.description ?? plainText)
-                  : plainText
-              }
-            />
-          ))}
+          {eligibility
+            .filter((entry) => entry.platform !== "pinterest")
+            .map((entry) => (
+              <PlatformPreviewCard
+                eligibility={entry}
+                key={entry.platform}
+                plainText={
+                  entry.platform === "youtube"
+                    ? (youtubeSettings.description ?? plainText)
+                    : plainText
+                }
+              />
+            ))}
+          {view.availableConnections
+            .filter(
+              (connection) =>
+                connection.platform === "pinterest" &&
+                selectedConnectionIds.includes(connection.id),
+            )
+            .map((connection) => {
+              const entry = eligibility.find(
+                (item) => item.platform === "pinterest",
+              );
+              return entry ? (
+                <PlatformPreviewCard
+                  key={connection.id}
+                  eligibility={entry}
+                  accountName={connection.accountName}
+                  plainText={
+                    pinterestSettings[connection.id]?.description ?? plainText
+                  }
+                />
+              ) : null;
+            })}
         </aside>
       </div>
+      {view.availableConnections
+        .filter(
+          (connection) =>
+            connection.platform === "pinterest" &&
+            selectedConnectionIds.includes(connection.id),
+        )
+        .map((connection) => (
+          <PinterestPostSettingsPanel
+            key={connection.id}
+            connectionId={connection.id}
+            accountName={connection.accountName}
+            cover={
+              pinterestCovers.find(
+                (cover) =>
+                  cover.id ===
+                  pinterestSettings[connection.id]?.videoCoverAssetId,
+              ) ?? null
+            }
+            onCoverSelected={(cover) =>
+              setPinterestCovers((current) => [
+                ...current.filter((item) => item.id !== cover.id),
+                cover,
+              ])
+            }
+            value={
+              pinterestSettings[connection.id] ?? EMPTY_PINTEREST_PIN_SETTINGS
+            }
+            onChange={(settings) =>
+              setPinterestSettings((current) => ({
+                ...current,
+                [connection.id]: settings,
+              }))
+            }
+            disabled={!view.editable || pending || view.status === "scheduled"}
+            hasVideo={attachments.some(
+              (attachment) => attachment.asset.kind === "video",
+            )}
+          />
+        ))}
       {view.availableConnections.some((c) => c.platform === "youtube") ||
       view.youtubeSettings ||
       youtubeThumbnail ? (

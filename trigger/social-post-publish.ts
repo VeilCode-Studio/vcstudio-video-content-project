@@ -1,3 +1,4 @@
+import { validatePinterestPost } from "@/lib/social/validate-pinterest-post";
 import { logger, task, wait } from "@trigger.dev/sdk";
 import { z } from "zod";
 import {
@@ -301,8 +302,26 @@ export const socialPostPublishTask = task({
         })),
       );
 
+      let pinterestCoverUrl: string | undefined;
+      if (target.platform === "pinterest") {
+        const validated = await validatePinterestPost({
+          media,
+          workspaceId: input.workspaceId,
+          connectionId: connection.id,
+          settings: target.pinterestSettings,
+          text: target.overrideBodyPlainText ?? post.bodyPlainText,
+          hasVideo: media.some((item) => item.kind === "video"),
+        });
+        if (validated.cover)
+          pinterestCoverUrl = await createMediaAssetDownloadUrl(
+            validated.cover.objectKey,
+            environment.SOCIAL_POST_ASSET_URL_TTL_SECONDS,
+          );
+      }
       const provider = createSocialPostProvider(target.platform, connection);
       const result = await provider.publishPost({
+        pinterestSettings: target.pinterestSettings,
+        pinterestCoverUrl,
         youtubeSettings: target.youtubeSettings,
         tokens: { accessToken },
         account: { externalAccountId: connection.externalAccountId },

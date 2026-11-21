@@ -1,3 +1,7 @@
+import type {
+  PinterestPinSettings,
+  PinterestPostSettings,
+} from "@studio/contracts/publishing";
 import { sql } from "drizzle-orm";
 import type {
   ResearchSnapshot,
@@ -431,6 +435,7 @@ export const sceneAnalysisStatusEnum = pgEnum("scene_analysis_status", [
 // is decided by that feature's own registry, not by this enum — LinkedIn, for
 // example, is a social post destination but never a thumbnail or idea platform.
 export const contentPlatformEnum = pgEnum("content_platform", [
+  "pinterest",
   "youtube",
   "tiktok",
   "facebook",
@@ -4611,6 +4616,8 @@ export const socialPosts = pgTable(
      * already-published post was sent with.
      */
     bodyPlainText: text("body_plain_text").notNull().default(""),
+    pinterestSettings:
+      jsonb("pinterest_settings").$type<PinterestPostSettings>(),
     youtubeSettings: jsonb("youtube_settings").$type<SocialYouTubeSettings>(),
     youtubeThumbnailAssetId: uuid("youtube_thumbnail_asset_id"),
     status: socialPostStatusEnum("status").notNull().default("draft"),
@@ -4635,6 +4642,10 @@ export const socialPosts = pgTable(
       .notNull(),
   },
   (table) => [
+    check(
+      "social_posts_pinterest_settings_object",
+      sql`${table.pinterestSettings} is null or jsonb_typeof(${table.pinterestSettings}) = 'object'`,
+    ),
     uniqueIndex("social_posts_id_workspace_unique").on(
       table.id,
       table.workspaceId,
@@ -4777,6 +4788,8 @@ export const socialPostTargets = pgTable(
     /** Set when this platform's copy was edited away from the shared body. */
     overrideBodyPlainText: text("override_body_plain_text"),
     /** Immutable upload metadata captured when the destination is prepared. */
+    pinterestSettings:
+      jsonb("pinterest_settings").$type<PinterestPinSettings>(),
     youtubeSettings: jsonb("youtube_settings").$type<SocialYouTubeSettings>(),
     youtubeThumbnailAssetId: uuid("youtube_thumbnail_asset_id"),
     youtubeThumbnailStatus: text("youtube_thumbnail_status").$type<
@@ -4803,6 +4816,10 @@ export const socialPostTargets = pgTable(
       .notNull(),
   },
   (table) => [
+    check(
+      "social_targets_pinterest_settings",
+      sql`(${table.platform}::text = 'pinterest' and ${table.pinterestSettings} is not null and jsonb_typeof(${table.pinterestSettings}) = 'object') or (${table.platform}::text <> 'pinterest' and ${table.pinterestSettings} is null)`,
+    ),
     uniqueIndex("social_post_targets_id_workspace_unique").on(
       table.id,
       table.workspaceId,

@@ -51,6 +51,9 @@ beforeAll(async () => {
       "utf8",
     ),
   );
+  await pg.exec(
+    "alter table social_posts add column pinterest_settings jsonb; alter table social_post_targets add column pinterest_settings jsonb;",
+  );
   const db = drizzle({ client: pg });
   shared.database = Object.assign(db, {
     batch: (queries: { toSQL(): { sql: string; params: unknown[] } }[]) =>

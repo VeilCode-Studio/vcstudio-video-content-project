@@ -1,3 +1,4 @@
+import type { PinterestPostSettings } from "@studio/contracts/publishing";
 import type {
   ContentPlatform,
   SocialPost,
@@ -62,6 +63,8 @@ export type SocialPostSummarySource = Pick<
 >;
 
 export type SocialPostComposerView = {
+  pinterestSettings?: PinterestPostSettings | null;
+  pinterestCovers?: MediaAssetView[];
   youtubeSettings?: SocialYouTubeSettings | null;
   youtubeThumbnail?: MediaAssetView | null;
   id: string;

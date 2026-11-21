@@ -28,6 +28,11 @@ const m = vi.hoisted(() => ({
   draftDestinations: vi.fn(),
   prepareDestinations: vi.fn(),
   retryThumbnail: vi.fn(),
+  pinterestValidate: vi.fn(),
+}));
+vi.mock("@/lib/social/validate-pinterest-post", () => ({
+  validatePinterestPost: m.pinterestValidate,
+  PinterestSettingsError: class extends Error {},
 }));
 vi.mock("@/lib/social/retry-youtube-thumbnail", () => ({
   retrySocialYouTubeThumbnail: m.retryThumbnail,
@@ -756,5 +761,98 @@ describe("publication approval boundary", () => {
     );
     expect(m.publish).not.toHaveBeenCalled();
     expect(m.schedule).not.toHaveBeenCalled();
+  });
+});
+
+describe("Pinterest MCP preview and autonomous publication", () => {
+  function pinDraft() {
+    const settings = {
+      boardId: "42",
+      boardName: "Business",
+      title: "Exact Pin title",
+      description: "Exact Pin copy",
+      link: "https://example.test/",
+      videoCoverAssetId: null,
+      accessTier: "trial",
+    };
+    m.post.mockResolvedValue({
+      id: mcpIds.post,
+      version: 2,
+      status: "draft",
+      bodyPlainText: "Shared copy",
+      pinterestSettings: { [mcpIds.destination]: settings },
+      mcpOperationId: null,
+    });
+    m.connection.mockResolvedValue({
+      id: mcpIds.destination,
+      platform: "pinterest",
+      status: "active",
+      externalAccountName: "My Pinterest",
+      externalAccountId: "123",
+    });
+    m.media.mockResolvedValue([
+      {
+        source: "library",
+        sourceId: mcpIds.asset,
+        kind: "image",
+        title: "Original",
+        contentType: "image/png",
+        sizeBytes: 100,
+        objectKey: `workspaces/${mcpIds.workspace}/image.png`,
+        unavailable: false,
+      },
+    ]);
+    m.assets.mockResolvedValue([{ id: mcpIds.asset, kind: "image" }]);
+    m.pinterestValidate.mockResolvedValue({ settings, cover: null });
+  }
+  it("freezes exact Pin fields, board identity and Trial visibility in the preview", async () => {
+    pinDraft();
+    const preview = await buildPublicationPreview(ctx, request);
+    expect(preview.destinations[0]).toMatchObject({
+      platform: "pinterest",
+      text: "Exact Pin copy",
+      pinterest: {
+        boardId: "42",
+        title: "Exact Pin title",
+        link: "https://example.test/",
+        accessTier: "trial",
+      },
+    });
+    expect(m.publish).not.toHaveBeenCalled();
+  });
+  it("uses existing autonomous permission without a new approval gate", async () => {
+    pinDraft();
+    const { context, operation } = await autonomousSetup();
+    expect(
+      (
+        await executeMcpPublication(
+          context,
+          operation.id,
+          request.idempotencyKey,
+        )
+      ).status,
+    ).toBe("succeeded");
+    expect(m.publish).toHaveBeenCalledOnce();
+    expect(m.consume).not.toHaveBeenCalled();
+  });
+  it("rejects changed board metadata before execution", async () => {
+    pinDraft();
+    const { context, operation } = await autonomousSetup();
+    m.pinterestValidate.mockResolvedValue({
+      settings: {
+        boardId: "99",
+        boardName: "Other",
+        title: "Changed",
+        description: "Exact Pin copy",
+        link: null,
+        videoCoverAssetId: null,
+        accessTier: "trial",
+      },
+      cover: null,
+    });
+    await expect(
+      executeMcpPublication(context, operation.id, request.idempotencyKey),
+    ).rejects.toMatchObject({ code: "conflict" });
+    expect(m.publish).not.toHaveBeenCalled();
   });
 });

@@ -2,6 +2,7 @@ import type { VerifiedMediaMetadata } from "@/lib/media/media-inspection";
 import type { SocialPostPlatform } from "@/lib/social/platform-post-capabilities";
 
 const H264_DESTINATIONS = new Set<SocialPostPlatform>([
+  "pinterest",
   "instagram",
   "tiktok",
   "twitter",
@@ -18,6 +19,17 @@ export function checkVerifiedVideoCompatibility(input: {
         "Wait for server-side video inspection to finish before using this file.",
     };
   const video = input.metadata;
+  if (
+    input.platform === "pinterest" &&
+    (!["mp4", "mov"].includes(video.container) ||
+      video.durationMilliseconds < 4000 ||
+      video.durationMilliseconds > 900000)
+  )
+    return {
+      compatible: false,
+      reason:
+        "Pinterest requires an MP4/MOV video between 4 seconds and 15 minutes.",
+    };
   if (video.width < 16 || video.height < 16)
     return {
       compatible: false,

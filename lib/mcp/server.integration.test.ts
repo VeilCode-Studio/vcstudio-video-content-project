@@ -326,9 +326,9 @@ describe("real MCP SDK interoperability", () => {
     );
   });
 
-  it("publishes explicit OAuth metadata for all 63 tools without exposing UI approvals to the model", async () => {
+  it("publishes explicit OAuth metadata for all 64 tools without exposing UI approvals to the model", async () => {
     const tools = (await (await client()).listTools()).tools;
-    expect(tools).toHaveLength(63);
+    expect(tools).toHaveLength(64);
     expect(
       tools.filter(
         (tool) =>

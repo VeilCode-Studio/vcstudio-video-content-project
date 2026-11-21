@@ -166,6 +166,9 @@ for (const [name, entry] of [
             "next/navigation": path.resolve(
               "e2e/mcp/fixtures/MockNavigation.ts",
             ),
+            "@/app/(authenticated)/app/social/pinterest-actions": path.resolve(
+              "e2e/mcp/fixtures/MockPinterestActions.ts",
+            ),
             "@/app/(authenticated)/app/social/posts/actions": path.resolve(
               "e2e/mcp/fixtures/MockSocialActions.ts",
             ),

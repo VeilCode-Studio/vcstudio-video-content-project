@@ -1,4 +1,4 @@
-import { Music2Icon } from "lucide-react";
+import { Music2Icon, PinIcon } from "lucide-react";
 import { FacebookMarkIcon } from "@/components/brand/FacebookMarkIcon";
 import { InstagramMarkIcon } from "@/components/brand/InstagramMarkIcon";
 import { LinkedInMarkIcon } from "@/components/brand/LinkedInMarkIcon";
@@ -21,6 +21,8 @@ export function PlatformMarkIcon({
   platform: ContentPlatform;
 }) {
   switch (platform) {
+    case "pinterest":
+      return <PinIcon aria-hidden className={className} />;
     case "youtube":
       return <YouTubeMarkIcon className={className} />;
     case "facebook":

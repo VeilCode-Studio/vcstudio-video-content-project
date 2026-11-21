@@ -16,6 +16,7 @@ import type { ContentPlatform } from "@/db/schema";
  * a user clicks and the callback URI sent to the platform can never drift apart.
  */
 export const PLATFORM_ROUTE_SEGMENTS: Record<ContentPlatform, string> = {
+  pinterest: "pinterest",
   youtube: "youtube",
   facebook: "facebook",
   instagram: "instagram",

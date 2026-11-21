@@ -2,7 +2,10 @@ import { z } from "zod";
 import type { SocialPostComposerView } from "@/lib/social/social-post-view";
 import type { MediaAssetView } from "@/lib/media/media-asset-view";
 import { socialPostConnectionIdsSchema } from "@studio/contracts";
-import { socialYouTubeSettingsSchema } from "@studio/contracts/publishing";
+import {
+  pinterestPostSettingsSchema,
+  socialYouTubeSettingsSchema,
+} from "@studio/contracts/publishing";
 import {
   portableDocumentSchema,
   type PortableDocument,
@@ -17,6 +20,7 @@ const fixtureDocument: PortableDocument = {
     },
   ],
 };
+export const pinterestId = "66666666-6666-4666-8666-666666666666";
 export const draftKey = "vcstudio-social-draft-fixture";
 export const personalId = "44444444-4444-4444-8444-444444444444";
 export const businessId = "55555555-5555-4555-8555-555555555555";
@@ -79,6 +83,7 @@ export const draftStateSchema = z.object({
   connectionIds: socialPostConnectionIdsSchema,
   attachmentIds: z.array(z.string()).default([]),
   bodyDocument: portableDocumentSchema.default(() => fixtureDocument),
+  pinterestSettings: pinterestPostSettingsSchema.nullable().default(null),
   youtubeSettings: socialYouTubeSettingsSchema.nullable().default(null),
   youtubeThumbnailAssetId: z.string().nullable().default(null),
 });
@@ -89,10 +94,15 @@ export function composerFixture(): SocialPostComposerView {
     : {
         version: 2,
         name: "Saved destination test",
-        connectionIds: new URLSearchParams(location.search).has("mcp")
-          ? [personalId]
+        pinterestSettings: null,
+        connectionIds: new URLSearchParams(location.search).has("pinterest")
+          ? [pinterestId]
+          : new URLSearchParams(location.search).has("mcp")
+            ? [personalId]
+            : [],
+        attachmentIds: new URLSearchParams(location.search).has("pinterest")
+          ? [libraryImage.id]
           : [],
-        attachmentIds: [],
         bodyDocument: fixtureDocument,
         youtubeSettings: null,
         youtubeThumbnailAssetId: null,
@@ -126,6 +136,17 @@ export function composerFixture(): SocialPostComposerView {
     }),
     targets: [],
     availableConnections: [
+      ...(new URLSearchParams(location.search).has("pinterest")
+        ? [
+            {
+              id: pinterestId,
+              platform: "pinterest" as const,
+              platformLabel: "Pinterest",
+              accountName: "Studio Pinterest",
+              status: "active" as const,
+            },
+          ]
+        : []),
       ...(new URLSearchParams(location.search).has("youtube")
         ? [
             {

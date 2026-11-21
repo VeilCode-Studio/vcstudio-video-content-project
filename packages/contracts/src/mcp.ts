@@ -1,6 +1,9 @@
 import type { McpBudgetNotice } from "./mcp-budget";
 import { z } from "zod";
-import { socialYouTubeSettingsSchema } from "./publishing";
+import {
+  pinterestPinSettingsSchema,
+  socialYouTubeSettingsSchema,
+} from "./publishing";
 
 export const MAX_SOCIAL_POST_DESTINATIONS = 20;
 export const socialPostConnectionIdsSchema = z
@@ -135,6 +138,17 @@ export const publicationPreviewSchema = z.object({
       platform: z.string(),
       name: z.string(),
       text: z.string(),
+      pinterest: pinterestPinSettingsSchema
+        .extend({
+          cover: z
+            .object({
+              id: z.uuid(),
+              name: z.string(),
+              etag: z.string().nullable(),
+            })
+            .nullable(),
+        })
+        .optional(),
       youtube: socialYouTubeSettingsSchema
         .extend({
           thumbnail: z

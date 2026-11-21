@@ -1,3 +1,4 @@
+import type { PinterestPinSettings } from "@studio/contracts/publishing";
 import type { ContentPlatform, MediaAssetKind } from "@/db/schema";
 import type { SocialYouTubeSettings } from "@studio/contracts/publishing";
 import type { PlatformTokens } from "@/lib/publishing/platform-oauth-provider";
@@ -29,6 +30,8 @@ export type SocialPostMediaItem = {
 };
 
 export type PublishPostRequest = {
+  pinterestSettings?: PinterestPinSettings | null;
+  pinterestCoverUrl?: string;
   youtubeSettings?: SocialYouTubeSettings | null;
   tokens: Pick<PlatformTokens, "accessToken">;
   /** Destination account selected by the authorized workspace member. */

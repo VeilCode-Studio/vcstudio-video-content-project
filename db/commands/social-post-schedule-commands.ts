@@ -1,3 +1,4 @@
+import type { PinterestPinSettings } from "@studio/contracts/publishing";
 import "server-only";
 import type { SocialYouTubeSettings } from "@studio/contracts/publishing";
 
@@ -24,6 +25,7 @@ export async function scheduleSocialPost(input: {
     connectionId: string;
     idempotencyKey: string;
     overrideBodyPlainText: string | null;
+    pinterestSettings?: PinterestPinSettings | null;
     youtubeSettings?: SocialYouTubeSettings | null;
     youtubeThumbnailAssetId?: string | null;
   }[];
@@ -94,6 +96,7 @@ export async function scheduleSocialPost(input: {
       connection_id: target.connectionId,
       override_body_plain_text: target.overrideBodyPlainText,
       idempotency_key: target.idempotencyKey,
+      pinterest_settings: target.pinterestSettings ?? null,
       youtube_settings: target.youtubeSettings ?? null,
       youtube_thumbnail_asset_id: target.youtubeThumbnailAssetId ?? null,
     }));
@@ -114,6 +117,10 @@ export async function scheduleSocialPost(input: {
           idempotencyKey: sql<string>`target.idempotency_key`.as(
             "idempotency_key",
           ),
+          pinterestSettings:
+            sql<PinterestPinSettings | null>`target.pinterest_settings`.as(
+              "pinterest_settings",
+            ),
           youtubeSettings:
             sql<SocialYouTubeSettings | null>`target.youtube_settings`.as(
               "youtube_settings",
@@ -131,7 +138,7 @@ export async function scheduleSocialPost(input: {
         })
         .from(socialPosts)
         .innerJoin(
-          sql`jsonb_to_recordset(${JSON.stringify(targetPayload)}::jsonb) as target(platform text, connection_id text, override_body_plain_text text, idempotency_key text, youtube_settings jsonb, youtube_thumbnail_asset_id text)`,
+          sql`jsonb_to_recordset(${JSON.stringify(targetPayload)}::jsonb) as target(platform text, connection_id text, override_body_plain_text text, idempotency_key text, pinterest_settings jsonb, youtube_settings jsonb, youtube_thumbnail_asset_id text)`,
           sql`true`,
         )
         .where(

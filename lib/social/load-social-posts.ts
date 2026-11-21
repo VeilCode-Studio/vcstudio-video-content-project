@@ -1,3 +1,4 @@
+import { findReadyMediaAssets } from "@/db/repositories/media-assets.repository";
 import "server-only";
 import { findMediaAsset } from "@/db/repositories/media-assets.repository";
 import { toMediaAssetView } from "@/lib/media/media-asset-view";
@@ -155,6 +156,19 @@ export async function loadSocialPostComposerView(input: {
         : null,
     ]);
 
+  const coverIds = [
+    ...new Set(
+      Object.values(post.pinterestSettings ?? {}).flatMap((settings) =>
+        settings.videoCoverAssetId ? [settings.videoCoverAssetId] : [],
+      ),
+    ),
+  ];
+  const pinterestCovers = coverIds.length
+    ? await findReadyMediaAssets({
+        workspaceId: input.workspaceId,
+        mediaAssetIds: coverIds,
+      })
+    : [];
   const attachments = await Promise.all(
     media.map(async (attachment) =>
       toPostAttachmentView(
@@ -182,6 +196,15 @@ export async function loadSocialPostComposerView(input: {
     version: post.version,
     bodyDocument: post.bodyDocument,
     bodyPlainText: post.bodyPlainText,
+    pinterestSettings: post.pinterestSettings,
+    pinterestCovers: await Promise.all(
+      pinterestCovers.map(async (cover) =>
+        toMediaAssetView(
+          cover,
+          await createMediaAssetDownloadUrl(cover.objectKey),
+        ),
+      ),
+    ),
     youtubeSettings: post.youtubeSettings,
     youtubeThumbnail:
       thumbnail && !thumbnail.deletedAt

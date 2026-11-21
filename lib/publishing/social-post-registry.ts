@@ -1,4 +1,6 @@
 import "server-only";
+import { PinterestOAuthProvider } from "./providers/pinterest-oauth-provider";
+import { PinterestSocialPostProvider } from "./providers/pinterest-social-post-provider";
 
 import type { ContentPlatform } from "@/db/schema";
 import { getPublishingEnvironment } from "@/lib/env/server";
@@ -48,6 +50,13 @@ export function isSocialPostPlatformConfigured(
   account?: { externalAccountId: string; isSandbox?: boolean },
 ): boolean {
   const environment = getPublishingEnvironment();
+  if (platform === "pinterest")
+    return (
+      environment.ENABLE_PINTEREST &&
+      environment.PINTEREST_ACCESS_TIER !== "pending" &&
+      Boolean(environment.PINTEREST_API_ID?.trim()) &&
+      Boolean(environment.PINTEREST_API_SECRET?.trim())
+    );
   if (environment.ENABLE_SOCIAL_POST_SIMULATION) return true;
   if (platform === "linkedin" && account) {
     const kind = resolveLinkedInAccount(account.externalAccountId).kind;
@@ -82,6 +91,18 @@ export function isSocialPostPlatformConfigured(
 export function createPlatformOAuthProvider(
   platform: ContentPlatform,
 ): PlatformOAuthProvider {
+  if (platform === "pinterest") {
+    const environment = getPublishingEnvironment();
+    if (!isSocialPostPlatformConfigured(platform))
+      throw new PlatformNotConfiguredError(platform);
+    return new PinterestOAuthProvider({
+      clientId: requireCredential(environment.PINTEREST_API_ID, platform),
+      clientSecret: requireCredential(
+        environment.PINTEREST_API_SECRET,
+        platform,
+      ),
+    });
+  }
   if (platform === "linkedin") {
     const environment = getPublishingEnvironment();
     return new LinkedInOAuthProvider({
@@ -145,6 +166,8 @@ export function createSocialPostProvider(
     throw new UnsupportedPlatformError(platform);
 
   const environment = getPublishingEnvironment();
+  if (platform === "pinterest" && !isSocialPostPlatformConfigured(platform))
+    throw new PlatformNotConfiguredError(platform);
   if (environment.ENABLE_SOCIAL_POST_SIMULATION)
     return new SimulatedSocialPostProvider({
       platform,
@@ -153,6 +176,8 @@ export function createSocialPostProvider(
 
   const narrowed: SocialPostPlatform = platform;
   switch (narrowed) {
+    case "pinterest":
+      return new PinterestSocialPostProvider();
     case "linkedin":
       return new LinkedInSocialPostProvider({
         apiVersion: environment.LINKEDIN_API_VERSION,

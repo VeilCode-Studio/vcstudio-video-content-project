@@ -12,6 +12,7 @@ export type ReconnectableConnection = {
 export type ReconnectFlags = {
   videoPublishingEnabled: boolean;
   socialPostingEnabled: boolean;
+  pinterestEnabled?: boolean;
 };
 
 /**
@@ -37,6 +38,10 @@ export function getReconnectAuthorizePath(
   if (connection.status === "revoked") return null;
 
   switch (connection.platform) {
+    case "pinterest":
+      return flags.socialPostingEnabled && flags.pinterestEnabled
+        ? "/api/pinterest/authorize"
+        : null;
     case "youtube":
       return flags.videoPublishingEnabled ? "/api/youtube/authorize" : null;
     case "facebook":

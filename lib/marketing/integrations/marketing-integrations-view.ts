@@ -62,6 +62,8 @@ function platformConfigured(platform: ContentPlatform): boolean {
   const environment = getPublishingEnvironment();
   if (environment.ENABLE_SOCIAL_POST_SIMULATION) return true;
   switch (platform) {
+    case "pinterest":
+      return false;
     case "youtube":
       return (
         configured(environment.GOOGLE_OAUTH_CLIENT_ID) &&

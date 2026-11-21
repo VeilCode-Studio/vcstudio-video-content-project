@@ -738,6 +738,21 @@ export const publishingEnvironmentSchema = z.object({
    * missing these cannot refresh, and every scheduled X post fails once the
    * first token lapses.
    */
+  /** Pinterest remains disabled until developer approval and complete credentials. */
+  PINTEREST_ACCESS_TIER: z
+    .enum(["pending", "trial", "standard"])
+    .default("pending"),
+  ENABLE_PINTEREST: z
+    .enum(["true", "false"])
+    .default("false")
+    .transform((value) => value === "true"),
+  PINTEREST_API_ID: z
+    .string()
+    .trim()
+    .regex(/^\d+$/)
+    .or(z.literal(""))
+    .optional(),
+  PINTEREST_API_SECRET: z.string().trim().optional(),
   TWITTER_CLIENT_ID: z.string().optional(),
   TWITTER_CLIENT_SECRET: z.string().optional(),
   ENABLE_VIDEO_PUBLISHING: z

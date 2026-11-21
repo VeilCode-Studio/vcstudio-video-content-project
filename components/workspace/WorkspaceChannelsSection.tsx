@@ -1,5 +1,6 @@
 "use client";
 
+import { PinterestConnectionPanel } from "@/components/publish/PinterestConnectionPanel";
 import { useRouter } from "next/navigation";
 import { disconnectWorkspaceChannelAction } from "@/app/(authenticated)/app/settings/workspace/actions";
 import { ConnectYouTubeButton } from "@/components/publish/ConnectYouTubeButton";
@@ -88,7 +89,7 @@ export function WorkspaceChannelsSection({
     (channel) => channel.status === "active",
   ).length;
   const futurePlatforms = initialData.platforms.filter(
-    (platform) => !platform.available,
+    (platform) => !platform.available && platform.platform !== "pinterest",
   );
 
   async function disconnect(connectionId: string) {
@@ -100,6 +101,18 @@ export function WorkspaceChannelsSection({
   }
 
   const oauthMessages = [
+    oauthStatus.pinterest
+      ? {
+          connected: "Pinterest is now connected to this workspace.",
+          cancelled: "Pinterest authorization was cancelled.",
+          failed:
+            "Pinterest could not connect. Check app approval, callback and permissions, then try again.",
+          forbidden:
+            "Only an authorized workspace owner may connect Pinterest.",
+          invalid: "The Pinterest authorization expired or was invalid.",
+          expired: "Reconnect Pinterest to refresh authorization.",
+        }[oauthStatus.pinterest]
+      : null,
     oauthStatus.youtube ? YOUTUBE_OAUTH_MESSAGES[oauthStatus.youtube] : null,
     oauthStatus.facebook ? FACEBOOK_OAUTH_MESSAGES[oauthStatus.facebook] : null,
     oauthStatus.instagram
@@ -133,6 +146,11 @@ export function WorkspaceChannelsSection({
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
+          <PinterestConnectionPanel
+            ready={Boolean(initialData.pinterestReady)}
+            canConnect={canManageConnections}
+          />
+
           {canManageConnections && initialData.enabled ? (
             <>
               <ConnectYouTubeButton

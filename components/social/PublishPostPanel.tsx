@@ -9,7 +9,10 @@ import { PlatformCaptionEditor } from "@/components/social/PlatformCaptionEditor
 import { SchedulePostDialog } from "@/components/social/SchedulePostDialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import type { SocialYouTubeSettings } from "@studio/contracts/publishing";
+import type {
+  PinterestPostSettings,
+  SocialYouTubeSettings,
+} from "@studio/contracts/publishing";
 import { youTubeSettingsProblem } from "@/lib/social/youtube-post-settings";
 import { toneContainerClassName } from "@/lib/social/eligibility-tone";
 import {
@@ -50,6 +53,7 @@ export function PublishPostPanel({
   selectedIds,
   onSelectedIdsChange,
   saving,
+  pinterestSettings,
   youtubeSettings,
   version,
 }: {
@@ -65,6 +69,7 @@ export function PublishPostPanel({
   selectedIds: string[];
   onSelectedIdsChange: (ids: string[]) => void;
   saving: boolean;
+  pinterestSettings?: PinterestPostSettings | null;
   youtubeSettings?: SocialYouTubeSettings | null;
   version?: number;
 }) {
@@ -108,7 +113,10 @@ export function PublishPostPanel({
     ),
   );
   const requestCaptionOverrides = selectedPlatforms
-    .filter((platform) => captionOverrides[platform] !== undefined)
+    .filter(
+      (platform) =>
+        platform !== "pinterest" && captionOverrides[platform] !== undefined,
+    )
     .map((platform) => ({ platform, text: captionOverrides[platform] ?? "" }));
   const youtubeProblem = selectedPlatforms.includes("youtube")
     ? youTubeSettingsProblem(
@@ -151,7 +159,9 @@ export function PublishPostPanel({
                   plainTextLength: (
                     (connection.platform === "youtube"
                       ? youtubeSettings?.description
-                      : null) ??
+                      : connection.platform === "pinterest"
+                        ? pinterestSettings?.[connection.id]?.description
+                        : null) ??
                     captionOverrides[connection.platform] ??
                     basePlainText
                   ).length,
@@ -227,7 +237,7 @@ export function PublishPostPanel({
         </ul>
       )}
 
-      {selectedPlatforms.length > 0 ? (
+      {selectedPlatforms.some((platform) => platform !== "pinterest") ? (
         <div className="space-y-2 border-t pt-3">
           <div>
             <h3 className="text-sm font-medium">Platform captions</h3>
@@ -235,36 +245,39 @@ export function PublishPostPanel({
               Keep the shared text or tailor it for each selected platform.
             </p>
           </div>
-          {selectedPlatforms.map((platform) => {
-            const connection = connections.find(
-              (entry) => entry.platform === platform,
-            );
-            const customized = captionOverrides[platform] !== undefined;
-            return (
-              <PlatformCaptionEditor
-                baseText={basePlainText}
-                customized={customized}
-                key={platform}
-                label={connection?.platformLabel ?? platform}
-                onChange={(text) =>
-                  setCaptionOverrides((current) => ({
-                    ...current,
-                    [platform]: text,
-                  }))
-                }
-                onCustomizedChange={(next) =>
-                  setCaptionOverrides((current) => {
-                    if (next) return { ...current, [platform]: basePlainText };
-                    const updated = { ...current };
-                    delete updated[platform];
-                    return updated;
-                  })
-                }
-                platform={platform}
-                value={captionOverrides[platform] ?? basePlainText}
-              />
-            );
-          })}
+          {selectedPlatforms
+            .filter((platform) => platform !== "pinterest")
+            .map((platform) => {
+              const connection = connections.find(
+                (entry) => entry.platform === platform,
+              );
+              const customized = captionOverrides[platform] !== undefined;
+              return (
+                <PlatformCaptionEditor
+                  baseText={basePlainText}
+                  customized={customized}
+                  key={platform}
+                  label={connection?.platformLabel ?? platform}
+                  onChange={(text) =>
+                    setCaptionOverrides((current) => ({
+                      ...current,
+                      [platform]: text,
+                    }))
+                  }
+                  onCustomizedChange={(next) =>
+                    setCaptionOverrides((current) => {
+                      if (next)
+                        return { ...current, [platform]: basePlainText };
+                      const updated = { ...current };
+                      delete updated[platform];
+                      return updated;
+                    })
+                  }
+                  platform={platform}
+                  value={captionOverrides[platform] ?? basePlainText}
+                />
+              );
+            })}
         </div>
       ) : null}
 

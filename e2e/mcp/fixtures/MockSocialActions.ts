@@ -55,6 +55,9 @@ export async function saveSocialPostAction(form: FormData) {
     name: form.get("name"),
     bodyDocument: JSON.parse(String(form.get("bodyDocument"))),
     connectionIds: JSON.parse(String(form.get("connectionIds"))),
+    pinterestSettings: JSON.parse(
+      String(form.get("pinterestSettings") ?? "null"),
+    ),
     youtubeSettings: JSON.parse(String(form.get("youtubeSettings") ?? "null")),
     youtubeThumbnailAssetId: form.get("youtubeThumbnailAssetId") || null,
     attachmentIds: form

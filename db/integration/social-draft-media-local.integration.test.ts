@@ -34,7 +34,7 @@ beforeAll(async () => {
   create table video_renders(id uuid primary key, workspace_id uuid, status text, asset_object_key text, asset_content_type text, asset_size_bytes int, width int, height int, duration_milliseconds int, output_duration_milliseconds int, created_at timestamptz);
   `);
   await pg.exec(
-    "alter table social_posts add column youtube_settings jsonb, add column youtube_thumbnail_asset_id uuid;",
+    "alter table social_posts add column pinterest_settings jsonb, add column youtube_settings jsonb, add column youtube_thumbnail_asset_id uuid;",
   );
   const rows = [
     [ids[0], workspace, "image", "ready", null, null],

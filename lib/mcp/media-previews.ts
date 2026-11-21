@@ -24,9 +24,10 @@ export async function loadMcpMediaPreviews(
   });
   const thumbnailIds = [
     ...new Set(
-      preview.destinations.flatMap((d) =>
-        d.youtube?.thumbnail ? [d.youtube.thumbnail.id] : [],
-      ),
+      preview.destinations.flatMap((d) => [
+        ...(d.youtube?.thumbnail ? [d.youtube.thumbnail.id] : []),
+        ...(d.pinterest?.cover ? [d.pinterest.cover.id] : []),
+      ]),
     ),
   ];
   const thumbnails = thumbnailIds.length
@@ -35,7 +36,7 @@ export async function loadMcpMediaPreviews(
   requireMcp(
     thumbnails.length === thumbnailIds.length,
     "invalid_media",
-    "The chosen YouTube thumbnail is unavailable.",
+    "A chosen publication thumbnail or cover is unavailable.",
   );
   return Promise.all(
     [

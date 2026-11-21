@@ -9,6 +9,7 @@ import type { ContentPlatform } from "@/db/schema";
  */
 export const PLATFORM_BRAND_BACKGROUND_CLASS: Record<ContentPlatform, string> =
   {
+    pinterest: "bg-[#e60023]",
     youtube: "bg-[#e60000]",
     facebook: "bg-[#1877f2]",
     instagram: "bg-linear-to-br from-[#833ab4] via-[#e1306c] to-[#f77737]",

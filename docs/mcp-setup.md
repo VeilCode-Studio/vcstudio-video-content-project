@@ -1,5 +1,9 @@
 # VCStudio MCP v1 setup and verification
 
+## Pinterest extension - 21 November 2026 (local; release pending)
+
+MCP 1.5.0 adds Read tool `get_pinterest_boards` and Pinterest fields on existing Social draft/publication tools (64 registered, 62 assistant-visible). It preserves existing publishing autonomy and scopes. `features.pinterestPublishing` stays false while app approval, credentials or enablement are pending. Refresh tool discovery after release. No live Pinterest connection or Pin has been tested. See [Pinterest setup and limits](pinterest-publishing.md).
+
 ## Saved keyword research — 19 November 2026
 
 MCP 1.4.1 adds the read-only `get_research_keywords` tool: 63 registered tools, 61 assistant-callable. It shares the Social keyword page's bounded saved-observation analysis, including optional reuse of completed transcripts/evidence, without starting a paid analysis. Existing Read consent/grants suffice; refresh tool discovery after release. No new OAuth scope, migration, environment or worker deployment is required. Live hashtag discovery remains unconfigured. See [keyword research](social-keyword-research.md).
