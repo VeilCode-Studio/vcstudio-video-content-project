@@ -46,7 +46,7 @@ export function CharacterReferenceTypeSelector({
   disabled: boolean;
 }) {
   return (
-    <div className="space-y-2">
+    <div className="flex min-w-0 flex-col gap-2">
       <Label htmlFor="character-reference-type">Reference type</Label>
       <FormSelect
         disabled={disabled}

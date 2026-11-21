@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { CharacterReferenceUploader } from "@/components/characters/CharacterReferenceUploader";
 import { VoicePresetSelector } from "@/components/audio/VoicePresetSelector";
 import { ProjectChannelSection } from "@/components/projects/ProjectChannelSection";
 import { ProjectVisualDefault } from "@/components/video/ProjectVisualDefault";
@@ -34,6 +35,12 @@ export function ProjectFormAlignmentHarness() {
   const canEdit = !new URLSearchParams(location.search).has("readOnly");
   return (
     <main className="app-container app-main app-page app-form-page">
+      <section aria-label="Character references">
+        <CharacterReferenceUploader
+          workspaceId="test-workspace"
+          characterId="test-character"
+        />
+      </section>
       <section aria-label="Narration" className="app-panel">
         <VoicePresetSelector
           voicePresets={presets}

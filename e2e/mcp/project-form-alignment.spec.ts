@@ -18,6 +18,31 @@ for (const theme of ["light", "dark"]) {
     }, testInfo) => {
       await page.setViewportSize({ width, height: 1100 });
       await page.goto(`/project-form-alignment.html?theme=${theme}`);
+      const reference = page.getByRole("combobox", { name: "Reference type" });
+      const image = page.locator("#character-reference-file");
+      const upload = page.getByRole("button", { name: "Upload reference" });
+      if (width >= 640) {
+        await expectAlignedControls(reference, image);
+        await expectAlignedControls(image, upload);
+      } else {
+        const boxes = await Promise.all([
+          reference.boundingBox(),
+          image.boundingBox(),
+          upload.boundingBox(),
+        ]);
+        for (const box of boxes) {
+          expect(box?.height).toBe(40);
+          expect(box?.x).toBe(boxes[0]?.x);
+          expect(box?.width).toBe(boxes[0]?.width);
+        }
+        expect(boxes[1]!.y).toBeGreaterThan(boxes[0]!.y + boxes[0]!.height);
+        expect(boxes[2]!.y).toBeGreaterThan(boxes[1]!.y + boxes[1]!.height);
+      }
+      await reference.click();
+      await page
+        .getByRole("option", { name: "Full-body view", exact: true })
+        .click();
+      await expect(reference).toContainText("Full-body view");
       const voice = page.getByRole("combobox", { name: "Voice preset" });
       const createVoice = page.getByRole("button", {
         name: "New voice preset",

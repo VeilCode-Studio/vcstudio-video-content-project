@@ -649,6 +649,8 @@ Phases 1–12 are implemented through authenticated workspaces, project/script v
 
 ## Recent major changes
 
+- 2026-11-21: Aligned the character reference type, image upload field and action using shared 40px controls, flex label gaps and responsive grid columns.
+
 - 2026-11-21: Accounts & connections and Readiness share token-expiry and error health checks. Account cards show authorization expiry, attention badges and reconnect actions, with disconnected identities visible and separate summary counts.
 
 - 2026-11-21: Separated the Pinterest connection banner from the other account buttons with the standard section gap.

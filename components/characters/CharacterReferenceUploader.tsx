@@ -22,13 +22,13 @@ export function CharacterReferenceUploader({
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   return (
-    <div className="grid gap-4 rounded-xl border bg-muted/20 p-4 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
+    <div className="grid gap-4 rounded-xl border bg-muted/20 p-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-end">
       <CharacterReferenceTypeSelector
         disabled={pending}
         onChange={setType}
         value={type}
       />
-      <div className="space-y-2">
+      <div className="flex min-w-0 flex-col gap-2">
         <Label htmlFor="character-reference-file">Image</Label>
         <Input
           accept="image/png,image/jpeg,image/webp"
@@ -39,6 +39,7 @@ export function CharacterReferenceUploader({
         />
       </div>
       <Button
+        className="h-10 w-full sm:w-auto"
         disabled={pending}
         onClick={() => {
           const file = inputRef.current?.files?.[0];
