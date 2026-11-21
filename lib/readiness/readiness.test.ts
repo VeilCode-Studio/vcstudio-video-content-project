@@ -60,6 +60,34 @@ describe("operational readiness", () => {
     expect(serialized).not.toContain("secret-key");
   });
 
+  it("counts expiry, revocation and provider errors consistently with account cards", async () => {
+    mocks.loadSnapshot.mockResolvedValue({
+      heartbeat: null,
+      connections: [
+        { status: "active", expiresAt: null, lastError: null },
+        {
+          status: "active",
+          expiresAt: new Date("2020-01-01"),
+          lastError: null,
+        },
+        { status: "active", expiresAt: null, lastError: "Reconnect required." },
+        { status: "revoked", expiresAt: null, lastError: null },
+      ],
+      googleBusiness: null,
+      stuckCount: 0,
+      schemaCompatible: true,
+    });
+    const view = await loadOperationalReadiness(
+      "11111111-1111-4111-8111-111111111111",
+    );
+    expect(
+      view.workspace.find((item) => item.id === "connections"),
+    ).toMatchObject({
+      status: "degraded",
+      detail: "1 active; 3 expired, revoked, or unhealthy.",
+    });
+  });
+
   it("allows for the thirty-minute maintenance heartbeat cadence", async () => {
     mocks.loadSnapshot.mockResolvedValue({
       heartbeat: { lastCompletedAt: new Date(Date.now() - 40 * 60_000) },

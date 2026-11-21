@@ -18,7 +18,7 @@ import type { WorkspaceChannelView } from "@/lib/publishing/workspace-connection
 
 const STATUS_LABELS: Record<WorkspaceChannelView["status"], string> = {
   active: "Connected",
-  expired: "Needs attention",
+  expired: "Authorization expired",
   revoked: "Disconnected",
 };
 
@@ -31,8 +31,8 @@ export function WorkspaceChannelCard({
   channel: WorkspaceChannelView;
   onDisconnect: (connectionId: string) => Promise<DisconnectChannelResult>;
 }) {
-  const active = channel.status === "active";
-  const needsAttention = !active || channel.lastError !== null;
+  const active = channel.status === "active" && !channel.lastError;
+  const needsAttention = !active;
 
   return (
     <li className="min-w-0">
@@ -56,7 +56,7 @@ export function WorkspaceChannelCard({
                   className={
                     active
                       ? "border-emerald-200 bg-emerald-50 px-2.5 py-1 text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-300"
-                      : "px-2.5 py-1"
+                      : "border-amber-200 bg-amber-50 px-2.5 py-1 text-amber-800 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-200"
                   }
                   variant={active ? "outline" : "secondary"}
                 >
@@ -65,7 +65,9 @@ export function WorkspaceChannelCard({
                   ) : (
                     <TriangleAlertIcon aria-hidden className="size-3" />
                   )}
-                  {STATUS_LABELS[channel.status]}
+                  {channel.status === "active" && channel.lastError
+                    ? "Needs attention"
+                    : STATUS_LABELS[channel.status]}
                 </Badge>
               </div>
               <p className="mt-1 text-sm text-muted-foreground">
@@ -75,6 +77,20 @@ export function WorkspaceChannelCard({
               <p className="mt-2 text-xs text-muted-foreground [overflow-wrap:anywhere]">
                 {channel.postingRequirement}
               </p>
+              {channel.authorizationExpiresAtLabel ? (
+                <p className="mt-2 text-sm">
+                  {channel.status === "expired"
+                    ? "Authorization expired"
+                    : "Token expiry"}{" "}
+                  {channel.authorizationExpiresAtLabel}
+                </p>
+              ) : null}
+              {channel.status === "revoked" ? (
+                <p className="mt-2 text-sm text-muted-foreground">
+                  This account is disconnected. Use the platform connection
+                  button above to authorize it again.
+                </p>
+              ) : null}
               {channel.lastError ? (
                 <p className="mt-1 text-sm text-amber-700 [overflow-wrap:anywhere] dark:text-amber-300">
                   {channel.lastError}

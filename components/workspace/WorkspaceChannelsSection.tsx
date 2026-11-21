@@ -1,6 +1,7 @@
 "use client";
 
 import { PinterestConnectionPanel } from "@/components/publish/PinterestConnectionPanel";
+import { Badge } from "@/components/ui/badge";
 import { useRouter } from "next/navigation";
 import { disconnectWorkspaceChannelAction } from "@/app/(authenticated)/app/settings/workspace/actions";
 import { ConnectYouTubeButton } from "@/components/publish/ConnectYouTubeButton";
@@ -187,6 +188,41 @@ export function WorkspaceChannelsSection({
             </div>
           ) : null}
         </div>
+      </div>
+
+      <div
+        className="flex flex-wrap gap-2"
+        aria-label="Connection health summary"
+      >
+        <Badge variant="outline">
+          {
+            initialData.channels.filter(
+              (channel) => channel.status === "active" && !channel.lastError,
+            ).length
+          }{" "}
+          connected
+        </Badge>
+        <Badge
+          variant="outline"
+          className="border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-200"
+        >
+          {
+            initialData.channels.filter(
+              (channel) =>
+                channel.status !== "revoked" &&
+                (channel.status === "expired" || Boolean(channel.lastError)),
+            ).length
+          }{" "}
+          need attention
+        </Badge>
+        <Badge variant="secondary">
+          {
+            initialData.channels.filter(
+              (channel) => channel.status === "revoked",
+            ).length
+          }{" "}
+          disconnected
+        </Badge>
       </div>
 
       {canManageConnections && initialData.enabled ? (

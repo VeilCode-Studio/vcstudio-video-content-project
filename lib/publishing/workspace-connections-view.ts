@@ -1,4 +1,5 @@
 import "server-only";
+import { connectionHealth } from "./connection-health";
 
 import type { ContentPlatform } from "@/db/schema";
 import { platformConnectionLabel } from "@/lib/publishing/connection-label";
@@ -23,6 +24,7 @@ export type WorkspaceChannelView = {
   status: "active" | "expired" | "revoked";
   lastError: string | null;
   updatedAtLabel: string;
+  authorizationExpiresAtLabel?: string | null;
   postingRequirement: string;
   /** OAuth start route that re-authorizes this account; null when not offered. */
   reconnectPath: string | null;
@@ -63,31 +65,44 @@ export function buildWorkspaceChannelsView(input: {
   pinterestReady?: boolean;
   socialPostingEnabled: boolean;
   connections: PlatformConnectionSummary[];
+  now?: Date;
 }): WorkspaceChannelsView {
+  const now = input.now ?? new Date();
   return {
     enabled: input.enabled,
     pinterestReady: Boolean(input.pinterestReady),
     socialPostingEnabled: input.socialPostingEnabled,
-    channels: input.connections
-      .filter((connection) => connection.status !== "revoked")
-      .map((connection) => ({
-        id: connection.id,
-        platform: connection.platform,
-        platformLabel: platformConnectionLabel(connection),
-        accountName: connection.externalAccountName,
-        accountUrl: connection.externalAccountUrl,
-        status: connection.status,
-        lastError: connection.lastError,
-        updatedAtLabel: formatUtc(connection.updatedAt),
-        postingRequirement: isSocialPostPlatform(connection.platform)
-          ? getPlatformPostCapability(connection.platform).mediaRequirement
-          : "This account is used for video publishing only.",
-        reconnectPath: getReconnectAuthorizePath(connection, {
-          videoPublishingEnabled: input.enabled,
-          socialPostingEnabled: input.socialPostingEnabled,
-          pinterestEnabled: input.pinterestReady,
-        }),
-      })),
+    channels: input.connections.map((connection) => ({
+      id: connection.id,
+      platform: connection.platform,
+      platformLabel: platformConnectionLabel(connection),
+      accountName: connection.externalAccountName,
+      accountUrl: connection.externalAccountUrl,
+      status: connectionHealth(
+        {
+          status: connection.status,
+          expiresAt: connection.accessTokenExpiresAt,
+          lastError: connection.lastError,
+        },
+        now,
+      ).status,
+      lastError: connection.lastError,
+      updatedAtLabel: formatUtc(connection.updatedAt),
+      authorizationExpiresAtLabel: connection.accessTokenExpiresAt
+        ? connection.accessTokenExpiresAt
+            .toISOString()
+            .replace("T", " ")
+            .slice(0, 16) + " UTC"
+        : null,
+      postingRequirement: isSocialPostPlatform(connection.platform)
+        ? getPlatformPostCapability(connection.platform).mediaRequirement
+        : "This account is used for video publishing only.",
+      reconnectPath: getReconnectAuthorizePath(connection, {
+        videoPublishingEnabled: input.enabled,
+        socialPostingEnabled: input.socialPostingEnabled,
+        pinterestEnabled: input.pinterestReady,
+      }),
+    })),
     platforms: PLATFORM_ORDER.map((platform) => ({
       platform,
       label: CONTENT_PLATFORM_LABELS[platform],

@@ -649,6 +649,8 @@ Phases 1–12 are implemented through authenticated workspaces, project/script v
 
 ## Recent major changes
 
+- 2026-11-21: Accounts & connections and Readiness share token-expiry and error health checks. Account cards show authorization expiry, attention badges and reconnect actions, with disconnected identities visible and separate summary counts.
+
 - 2026-11-21: Separated the Pinterest connection banner from the other account buttons with the standard section gap.
 
 - 2026-11-21: Prepared Pinterest account and Pin publishing for Social and MCP 1.5.0. Released to production with the owner-approved Trial tier. Adds per-account board/title/description/link/cover settings, bounded board reads, streaming video upload, safe create checkpoints, explicit Trial visibility and shared-cover retention. Both additive production migrations are recorded in the database journal. Four server settings reuse the existing Pinterest ID/secret variable names; no dependency or recurring task added.

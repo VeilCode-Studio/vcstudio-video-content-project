@@ -5,6 +5,35 @@ vi.mock("server-only", () => ({}));
 import { buildWorkspaceChannelsView } from "@/lib/publishing/workspace-connections-view";
 
 describe("workspace channels view", () => {
+  it("shows expired authorizations even when the persisted connection is active", () => {
+    const now = new Date("2026-11-21T12:00:00Z");
+    const view = buildWorkspaceChannelsView({
+      enabled: true,
+      socialPostingEnabled: true,
+      now,
+      connections: [
+        {
+          id: "connection-expired",
+          workspaceId: "workspace-1",
+          platform: "linkedin",
+          externalAccountId: "person-1",
+          externalAccountName: "My LinkedIn",
+          externalAccountUrl: null,
+          status: "active",
+          lastError: null,
+          accessTokenExpiresAt: now,
+          createdAt: now,
+          updatedAt: now,
+        },
+      ],
+    });
+    expect(view.channels[0]).toMatchObject({
+      status: "expired",
+      accountName: "My LinkedIn",
+      authorizationExpiresAtLabel: "2026-11-21 12:00 UTC",
+      reconnectPath: "/api/linkedin/authorize",
+    });
+  });
   it("maps workspace connections without exposing credentials", () => {
     const view = buildWorkspaceChannelsView({
       enabled: true,
@@ -36,6 +65,7 @@ describe("workspace channels view", () => {
         status: "active",
         lastError: null,
         updatedAtLabel: "2026-07-22 UTC",
+        authorizationExpiresAtLabel: null,
         postingRequirement: "Needs one video.",
         reconnectPath: "/api/youtube/authorize",
       },
@@ -111,7 +141,7 @@ describe("workspace channels view", () => {
     ]);
   });
 
-  it("omits disconnected channels while retaining expired connections", () => {
+  it("identifies disconnected channels alongside expired connections", () => {
     const connection = {
       id: "connection-active",
       workspaceId: "workspace-1",
@@ -133,7 +163,7 @@ describe("workspace channels view", () => {
       ],
     });
 
-    expect(view.channels.map(({ id }) => id)).toEqual(["expired"]);
+    expect(view.channels.map(({ id }) => id)).toEqual(["expired", "revoked"]);
   });
   it("offers Pinterest only when the server resolves it ready", () => {
     const view = buildWorkspaceChannelsView({

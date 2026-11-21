@@ -1,4 +1,5 @@
 import "server-only";
+import { connectionHealth } from "@/lib/publishing/connection-health";
 
 import { ListObjectsV2Command } from "@aws-sdk/client-s3";
 import { unstable_cache } from "next/cache";
@@ -103,9 +104,7 @@ export async function loadOperationalReadiness(
     configured("TWITTER_CLIENT_ID", "TWITTER_CLIENT_SECRET") ? "X" : null,
   ].filter(Boolean);
   const activeConnections = snapshot.connections.filter(
-    (connection) =>
-      connection.status === "active" &&
-      (!connection.expiresAt || connection.expiresAt > now),
+    (connection) => connectionHealth(connection, now).healthy,
   );
   const expiredConnections =
     snapshot.connections.length - activeConnections.length;
@@ -181,7 +180,7 @@ export async function loadOperationalReadiness(
         detail: `${activeConnections.length} active; ${expiredConnections} expired, revoked, or unhealthy.`,
         action: activeConnections.length
           ? expiredConnections
-            ? "Reconnect unhealthy destinations in workspace settings."
+            ? "Review expired and disconnected accounts in Accounts & connections."
             : null
           : "Connect at least one publishing destination.",
       },
