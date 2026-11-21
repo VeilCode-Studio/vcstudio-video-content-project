@@ -6,7 +6,7 @@ This repository is the foundation for an internal production tool that converts 
 
 ## Current capabilities
 
-- **Independent Image Studio (local implementation, release pending):** `/app/images` creates standalone library images from a prompt and optional references, with a signed cost review, quality/canvas choices, durable progress and downloads. It reuses OpenAI image configuration and workspace accounting. See [setup and operating behavior](docs/image-studio.md).
+- **Independent Image Studio:** `/app/images` creates standalone library images from a prompt and optional references, with a signed cost review, quality/canvas choices, durable progress and downloads. It reuses OpenAI image configuration and workspace accounting. See [setup and operating behavior](docs/image-studio.md).
 
 - **Pinterest (Production Trial):** account OAuth/reconnection, public-board selection, one-image/video Pins, immutable Social scheduling and MCP publishing share existing authorization and approval modes. Safe code/example defaults are `ENABLE_PINTEREST=false` and `PINTEREST_ACCESS_TIER=pending`. Production web and worker settings use the owner's approved Trial tier. Trial Pins are creator-visible only. See [setup, limits and rollout](docs/pinterest-publishing.md).
 
@@ -651,7 +651,7 @@ Phases 1–12 are implemented through authenticated workspaces, project/script v
 
 ## Recent major changes
 
-- 2026-11-21: Added the independent Image Studio UI and browser image jobs, sharing standalone planning, image providers and library reuse with existing generation. The additive job/reservation migration passed isolated PostgreSQL and production-clone checks; production approval and the matching worker/web release are pending. Existing MCP generation remains unchanged.
+- 2026-11-21: Added the independent Image Studio UI and browser image jobs, sharing standalone planning, image providers and library reuse with existing generation. The additive job/reservation migration passed isolated PostgreSQL and production-clone checks; the approved production migration is applied, worker `20261121.2` is deployed, and the production web release is live. Existing MCP generation remains unchanged.
 
 - 2026-11-21: Added original-file downloads to library cards/details and Social post attachments/viewers. Downloads reauthorize the active workspace and generate short-lived attachment URLs on demand. The post editor copies the current plain text, including unsaved changes.
 
