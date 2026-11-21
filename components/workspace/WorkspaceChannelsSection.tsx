@@ -145,39 +145,46 @@ export function WorkspaceChannelsSection({
             workspace-scoped.
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="app-section w-full">
           <PinterestConnectionPanel
             ready={Boolean(initialData.pinterestReady)}
             canConnect={canManageConnections}
           />
 
-          {canManageConnections && initialData.enabled ? (
-            <>
-              <ConnectYouTubeButton
-                label={activeCount > 0 ? "Add YouTube" : "Connect YouTube"}
-              />
-              <ConnectFacebookButton
-                label={activeCount > 0 ? "Add Facebook" : "Connect Facebook"}
-              />
-              <ConnectInstagramButton
-                label={activeCount > 0 ? "Add Instagram" : "Connect Instagram"}
-              />
-              <ConnectTikTokButton
-                label={activeCount > 0 ? "Add TikTok" : "Connect TikTok"}
-              />
-            </>
-          ) : null}
-          {/*
-            LinkedIn and X are social-post destinations only — neither has a
-            rendered-video path — so they follow the posting flag rather than the
-            video one.
-          */}
-          {canManageConnections && initialData.socialPostingEnabled ? (
-            <>
-              <ConnectLinkedInButton label="Connect LinkedIn profile" />
-              <ConnectLinkedInPageButton />
-              <ConnectXButton label={activeCount > 0 ? "Add X" : "Connect X"} />
-            </>
+          {canManageConnections &&
+          (initialData.enabled || initialData.socialPostingEnabled) ? (
+            <div className="flex flex-wrap gap-2">
+              {initialData.enabled ? (
+                <>
+                  <ConnectYouTubeButton
+                    label={activeCount > 0 ? "Add YouTube" : "Connect YouTube"}
+                  />
+                  <ConnectFacebookButton
+                    label={
+                      activeCount > 0 ? "Add Facebook" : "Connect Facebook"
+                    }
+                  />
+                  <ConnectInstagramButton
+                    label={
+                      activeCount > 0 ? "Add Instagram" : "Connect Instagram"
+                    }
+                  />
+                  <ConnectTikTokButton
+                    label={activeCount > 0 ? "Add TikTok" : "Connect TikTok"}
+                  />
+                </>
+              ) : null}
+              {/* LinkedIn and X follow the Social posting flag. */}
+              {initialData.socialPostingEnabled ? (
+                <>
+                  <ConnectLinkedInButton label="Connect LinkedIn profile" />
+                  <ConnectLinkedInPageButton />
+                  <ConnectXButton
+                    label={activeCount > 0 ? "Add X" : "Connect X"}
+                  />
+                </>
+              ) : null}
+            </div>
           ) : null}
         </div>
       </div>

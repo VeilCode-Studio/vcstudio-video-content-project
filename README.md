@@ -649,6 +649,8 @@ Phases 1–12 are implemented through authenticated workspaces, project/script v
 
 ## Recent major changes
 
+- 2026-11-21: Separated the Pinterest connection banner from the other account buttons with the standard section gap.
+
 - 2026-11-21: Prepared Pinterest account and Pin publishing for Social and MCP 1.5.0. Released to production with the owner-approved Trial tier. Adds per-account board/title/description/link/cover settings, bounded board reads, streaming video upload, safe create checkpoints, explicit Trial visibility and shared-cover retention. Both additive production migrations are recorded in the database journal. Four server settings reuse the existing Pinterest ID/secret variable names; no dependency or recurring task added.
 
 - **20 November 2026 - Social post media viewer:** Attached media opens in a large responsive shadcn dialog. Multi-attachment posts use a shadcn/Embla carousel with swipe and keyboard navigation, position feedback, and native video/audio controls. Only the active slide mounts its media; gallery tiles never load video bytes. Inspection restrictions and private signed URLs are preserved. Adds pinned `embla-carousel-react` for the official shadcn carousel; no migration, environment or worker changes.
