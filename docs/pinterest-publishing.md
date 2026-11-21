@@ -2,7 +2,7 @@
 
 ## Delivery state
 
-Implemented locally on 21 November 2026; production release is pending. The owner supplied the client secret and confirmed Trial access. Local web/worker mirrors are synchronized for ENABLE_PINTEREST=true and PINTEREST_ACCESS_TIER=trial. Code/example defaults remain off/pending. Production synchronization follows the approved migration and release. No live Pinterest authorization, upload or Pin creation is claimed.
+Released to production on 21 November 2026 with owner-approved Trial access. Vercel and Trigger.dev use `ENABLE_PINTEREST=true` and `PINTEREST_ACCESS_TIER=trial`. Code and example defaults are disabled with pending access. Connecting a Pinterest account requires owner consent in Pinterest.
 
 This uses the existing Social draft, scheduling, publication worker, token encryption, workspace permissions and MCP approval modes. It does not enable Marketing Studio, internal generation or another recurring task. Pinterest is a Social destination; project render uploads use the existing Share as post workflow, not a second project publishing adapter.
 
@@ -66,12 +66,12 @@ Suggested assistant request after activation:
 
 ## Persistence and release
 
-Generated, unapplied migrations:
+Migrations applied and recorded in production:
 
 - `20261121051458_pinterest_publishing`: adds the platform enum value and nullable draft/target Pin settings.
 - `20261121051858_pinterest_settings_constraints`: validates JSON object shapes and requires Pin settings only on Pinterest targets. Text comparison keeps enum addition and constraints safe in one PostgreSQL transaction.
 
-Apply both migrations before releasing the new web/worker code because the new database projections include the nullable columns. Deploy matching publishing worker code and then the web app. Release with the owner-confirmed Trial tier and supplied secret synchronized to both runtimes. Trial Pins remain creator-visible only. Standard access later requires Pinterest approval and an explicit tier change, not another schema change. Preserve private access, existing MCP grants, the Google generation hold, Marketing's pause and all current recovery frequencies.
+The release applied both migrations before deploying Trigger.dev worker `20261121.1` and the web app at commit `ec4b988`. Both runtimes use the approved Trial tier. Standard access requires Pinterest approval and an explicit tier change.
 
 ## Verification
 
@@ -88,4 +88,4 @@ Provider tests use mocked Pinterest responses. Isolated PostgreSQL runs the gene
 
 The 128-file affected regression suite passed all 1,116 tests; the corrected media-validation cases passed again. Explicit TypeScript, environment placement and the production build passed. All 22 final browser journeys passed (Light/Dark, 390px/1440px, Pinterest and existing Social video/media flows). Full lint passed with three existing warnings; changed-file formatting passed. No dependency was added. Provider and worker tests use mocks; no live Pin or paid generation ran.
 
-The combined migrations passed on temporary Neon branch `br-polished-mouse-ai6fqkke`. Both constraints validated; existing 59 posts, 53 delivery targets and 23 connections matched production counts and full-record digests, excluding only the new null columns. Production remains unchanged pending explicit migration/branch-cleanup approval.
+The combined migrations passed on temporary Neon branch `br-polished-mouse-ai6fqkke`. Both constraints validated; existing 59 posts, 53 delivery targets and 23 connections matched production counts and full-record digests, excluding only the new null columns. Neon applied the migrations to production, recorded both checksums, and removed the temporary test branch following owner approval.

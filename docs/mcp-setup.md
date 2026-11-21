@@ -1,8 +1,8 @@
 # VCStudio MCP v1 setup and verification
 
-## Pinterest extension - 21 November 2026 (local; release pending)
+## Pinterest extension - 21 November 2026 (Production Trial)
 
-MCP 1.5.0 adds Read tool `get_pinterest_boards` and Pinterest fields on existing Social draft/publication tools (64 registered, 62 assistant-visible). It preserves existing publishing autonomy and scopes. `features.pinterestPublishing` stays false while app approval, credentials or enablement are pending. Refresh tool discovery after release. No live Pinterest connection or Pin has been tested. See [Pinterest setup and limits](pinterest-publishing.md).
+MCP 1.5.0 adds Read tool `get_pinterest_boards` and Pinterest fields on existing Social draft/publication tools (64 registered, 62 assistant-visible). It preserves existing publishing autonomy and scopes. `features.pinterestPublishing` stays false while app approval, credentials or enablement are pending. Refresh tool discovery to expose the new board tool. No live Pinterest connection or Pin has been tested. See [Pinterest setup and limits](pinterest-publishing.md).
 
 ## Saved keyword research — 19 November 2026
 

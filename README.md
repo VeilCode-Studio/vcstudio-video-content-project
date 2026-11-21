@@ -6,7 +6,7 @@ This repository is the foundation for an internal production tool that converts 
 
 ## Current capabilities
 
-- **Pinterest (local implementation; Trial confirmed, release pending):** account OAuth/reconnection, public-board selection, one-image/video Pins, immutable Social scheduling and MCP publishing share existing authorization and approval modes. Safe code/example defaults are `ENABLE_PINTEREST=false` and `PINTEREST_ACCESS_TIER=pending`. The owner-confirmed Trial settings and supplied secret are synchronized locally; production activation awaits the migration/release. Trial Pins are creator-visible only. See [setup, limits and rollout](docs/pinterest-publishing.md).
+- **Pinterest (Production Trial):** account OAuth/reconnection, public-board selection, one-image/video Pins, immutable Social scheduling and MCP publishing share existing authorization and approval modes. Safe code/example defaults are `ENABLE_PINTEREST=false` and `PINTEREST_ACCESS_TIER=pending`. Production web and worker settings use the owner's approved Trial tier. Trial Pins are creator-visible only. See [setup, limits and rollout](docs/pinterest-publishing.md).
 
 - **Saved keyword research:** `/app/social/research/keywords` and MCP `get_research_keywords` find caption keywords, phrases and Unicode hashtags in the latest saved account observations. Results include observed engagement, source posts, dates and coverage; optional media evidence reuses completed analyses without starting paid work. Live Meta-wide search, search volume and Instagram hashtag discovery are not claimed. No new tables, worker jobs or configuration. See [scope and interpretation](docs/social-keyword-research.md).
 
@@ -649,7 +649,7 @@ Phases 1–12 are implemented through authenticated workspaces, project/script v
 
 ## Recent major changes
 
-- 2026-11-21: Prepared Pinterest account and Pin publishing for Social and MCP 1.5.0. The owner supplied credentials and confirmed Trial access; local runtime mirrors are synchronized, while production migration/release remains pending. Adds per-account board/title/description/link/cover settings, bounded board reads, streaming video upload, safe create checkpoints, explicit Trial visibility and shared-cover retention. Two additive migrations are generated; production rollout and developer approval remain pending. Four server settings reuse the existing Pinterest ID/secret variable names; no dependency or recurring task added.
+- 2026-11-21: Prepared Pinterest account and Pin publishing for Social and MCP 1.5.0. Released to production with the owner-approved Trial tier. Adds per-account board/title/description/link/cover settings, bounded board reads, streaming video upload, safe create checkpoints, explicit Trial visibility and shared-cover retention. Both additive production migrations are recorded in the database journal. Four server settings reuse the existing Pinterest ID/secret variable names; no dependency or recurring task added.
 
 - **20 November 2026 - Social post media viewer:** Attached media opens in a large responsive shadcn dialog. Multi-attachment posts use a shadcn/Embla carousel with swipe and keyboard navigation, position feedback, and native video/audio controls. Only the active slide mounts its media; gallery tiles never load video bytes. Inspection restrictions and private signed URLs are preserved. Adds pinned `embla-carousel-react` for the official shadcn carousel; no migration, environment or worker changes.
 
