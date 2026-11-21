@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { PostMediaViewer } from "./PostMediaViewer";
+import { MediaDownloadButton } from "./MediaDownloadButton";
 import {
   ArrowLeftIcon,
   ArrowRightIcon,
@@ -20,6 +21,7 @@ import type { PostAttachmentView } from "@/lib/social/social-post-view";
  * Instagram and image order on LinkedIn and Facebook.
  */
 export function PostMediaAttachments({
+  postId,
   attachments,
   editable,
   onMove,
@@ -27,6 +29,7 @@ export function PostMediaAttachments({
   onCheck,
   checkingId,
 }: {
+  postId?: string;
   attachments: PostAttachmentView[];
   editable: boolean;
   onMove: (assetId: string, direction: -1 | 1) => void;
@@ -78,6 +81,12 @@ export function PostMediaAttachments({
             <p className="truncate text-xs" title={attachment.asset.title}>
               {attachment.asset.title}
             </p>
+            <MediaDownloadButton
+              asset={attachment.asset}
+              source={attachment.source}
+              postId={postId}
+              unavailable={attachment.unavailable}
+            />
             {attachment.source === "render" ? (
               <p className="text-xs text-muted-foreground">Project render</p>
             ) : null}
@@ -154,6 +163,7 @@ export function PostMediaAttachments({
       </ul>
       {previewIndex !== null && attachments[previewIndex] ? (
         <PostMediaViewer
+          postId={postId}
           attachments={attachments}
           initialIndex={previewIndex}
           onClose={() => setPreviewIndex(null)}

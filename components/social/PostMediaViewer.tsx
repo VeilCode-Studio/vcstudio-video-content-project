@@ -14,14 +14,17 @@ import { CarouselPrevious } from "@/components/ui/CarouselPrevious";
 import { CarouselNext } from "@/components/ui/CarouselNext";
 import { type CarouselApi } from "@/hooks/useCarousel";
 import { PostMediaViewerItem } from "./PostMediaViewerItem";
+import { MediaDownloadButton } from "./MediaDownloadButton";
 import type { PostAttachmentView } from "@/lib/social/social-post-view";
 
 export function PostMediaViewer({
+  postId,
   attachments,
   initialIndex,
   onClose,
   returnFocus,
 }: {
+  postId?: string;
   attachments: PostAttachmentView[];
   initialIndex: number;
   onClose: () => void;
@@ -58,6 +61,14 @@ export function PostMediaViewer({
             proportions.
           </DialogDescription>
         </DialogHeader>
+        {attachment ? (
+          <MediaDownloadButton
+            asset={attachment.asset}
+            source={attachment.source}
+            postId={postId}
+            unavailable={attachment.unavailable}
+          />
+        ) : null}
         <Carousel
           aria-label="Post media"
           opts={{ startIndex: initialIndex, watchFocus: false }}

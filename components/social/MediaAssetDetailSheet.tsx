@@ -5,6 +5,7 @@ import { Loader2Icon } from "lucide-react";
 import { updateMediaAssetAction } from "@/app/(authenticated)/app/social/actions";
 import { MediaAssetDeleteDialog } from "@/components/social/MediaAssetDeleteDialog";
 import { MediaAssetPreview } from "@/components/social/MediaAssetPreview";
+import { MediaDownloadButton } from "./MediaDownloadButton";
 import { VideoThumbnailAction } from "@/components/social/VideoThumbnailAction";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -95,6 +96,7 @@ export function MediaAssetDetailSheet({
         </SheetHeader>
 
         <div className="space-y-4 px-4">
+          <MediaDownloadButton asset={asset} />
           <MediaAssetPreview
             asset={asset}
             className="flex max-h-64 items-center justify-center overflow-hidden rounded-lg border bg-muted"

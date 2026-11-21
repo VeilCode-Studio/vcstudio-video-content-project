@@ -58,6 +58,7 @@ export function PostMediaViewerHarness() {
     <main className="mx-auto max-w-4xl p-4">
       <h1>Post media</h1>
       <PostMediaAttachments
+        postId="11111111-1111-4111-8111-111111111111"
         attachments={attachments}
         editable={!new URLSearchParams(location.search).has("readonly")}
         onMove={(id, direction) =>

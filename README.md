@@ -649,6 +649,8 @@ Phases 1–12 are implemented through authenticated workspaces, project/script v
 
 ## Recent major changes
 
+- 2026-11-21: Added original-file downloads to library cards/details and Social post attachments/viewers. Downloads reauthorize the active workspace and generate short-lived attachment URLs on demand. The post editor copies the current plain text, including unsaved changes.
+
 - 2026-11-21: Aligned the character reference type, image upload field and action using shared 40px controls, flex label gaps and responsive grid columns.
 
 - 2026-11-21: Accounts & connections and Readiness share token-expiry and error health checks. Account cards show authorization expiry, attention badges and reconnect actions, with disconnected identities visible and separate summary counts.

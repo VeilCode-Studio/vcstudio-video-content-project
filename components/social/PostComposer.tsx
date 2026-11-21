@@ -1,4 +1,5 @@
 "use client";
+import { CopyButton } from "@/components/ui/CopyButton";
 import { PinterestPostSettingsPanel } from "./PinterestPostSettingsPanel";
 import {
   EMPTY_PINTEREST_PIN_SETTINGS,
@@ -363,7 +364,10 @@ export function PostComposer({
           </div>
 
           <div className="space-y-2">
-            <p className="text-sm font-medium">Post</p>
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-sm font-medium">Post</p>
+              <CopyButton label="post text" value={plainText} />
+            </div>
             <PostBodyEditor
               editable={view.editable && !pending}
               initialDocument={view.bodyDocument}
@@ -396,6 +400,7 @@ export function PostComposer({
               </p>
             ) : null}
             <PostMediaAttachments
+              postId={view.id}
               attachments={attachments}
               editable={view.editable && !pending}
               onMove={moveAttachment}

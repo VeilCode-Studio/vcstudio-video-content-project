@@ -2,6 +2,7 @@
 
 import { FilmIcon, ImageIcon, Music2Icon } from "lucide-react";
 import { MediaAssetPreview } from "@/components/social/MediaAssetPreview";
+import { MediaDownloadButton } from "./MediaDownloadButton";
 import { Badge } from "@/components/ui/badge";
 import { formatBytes } from "@/lib/format/bytes";
 import { formatDurationMs } from "@/lib/format/duration";
@@ -28,7 +29,7 @@ export function MediaAssetCard({
       : null;
 
   return (
-    <li>
+    <li className="space-y-2">
       <button
         className="w-full space-y-2 rounded-xl border p-2 text-left transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         onClick={() => onSelect(asset)}
@@ -54,6 +55,7 @@ export function MediaAssetCard({
           </div>
         </div>
       </button>
+      <MediaDownloadButton asset={asset} />
     </li>
   );
 }

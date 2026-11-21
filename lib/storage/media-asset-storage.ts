@@ -1,4 +1,5 @@
 import "server-only";
+import { downloadDisposition } from "./download-disposition";
 
 import {
   DeleteObjectCommand,
@@ -41,6 +42,7 @@ export async function createMediaAssetUploadUrl(input: {
 export async function createMediaAssetDownloadUrl(
   objectKey: string,
   expiresInSeconds?: number,
+  fileName?: string,
 ): Promise<string> {
   const environment = getStorageEnvironment();
   return getSignedUrl(
@@ -48,6 +50,9 @@ export async function createMediaAssetDownloadUrl(
     new GetObjectCommand({
       Bucket: environment.R2_BUCKET_NAME,
       Key: objectKey,
+      ...(fileName
+        ? { ResponseContentDisposition: downloadDisposition(fileName) }
+        : {}),
     }),
     {
       expiresIn:
