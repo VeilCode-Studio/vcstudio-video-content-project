@@ -651,7 +651,7 @@ Phases 1–12 are implemented through authenticated workspaces, project/script v
 
 ## Recent major changes
 
-- 2026-11-22: Image Studio shows selected reference images in a responsive contain-fit gallery and accepts direct PNG/JPEG/WebP uploads with progress. Completed uploads are selected automatically without replacing existing references. Shared upload authorization, actual-content validation and generation limits are reused; no migration, environment change or worker deployment.
+- 2026-11-22: Image Studio shows selected reference images in a responsive contain-fit gallery and accepts direct PNG/JPEG/WebP uploads with progress. Completed uploads are selected automatically without replacing existing references. Shared upload authorization, actual-content validation and generation limits are reused. Production web release `1a4d6e3` is verified; no migration, environment change or worker deployment.
 
 - 2026-11-21: Added the independent Image Studio UI and browser image jobs, sharing standalone planning, image providers and library reuse with existing generation. The additive job/reservation migration passed isolated PostgreSQL and production-clone checks; the approved production migration is applied, worker `20261121.2` is deployed, and the production web release is live. Existing MCP generation remains unchanged.
 
