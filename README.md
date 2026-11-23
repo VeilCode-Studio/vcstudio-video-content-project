@@ -651,7 +651,7 @@ Phases 1–12 are implemented through authenticated workspaces, project/script v
 
 ## Recent major changes
 
-- 2026-11-23: Added a responsive shadcn modal viewer and source-based Edit image flow to Image Studio results. Edits preserve the original asset and canvas, use the existing image-edit provider path, show a signed cost estimate and save a separate library result. No pixel-perfect preservation or free editing is promised. Existing authorization, budgets and retry controls remain in force; no migration, new environment setting or worker deployment.
+- 2026-11-23: Added a responsive shadcn modal viewer and source-based Edit image flow to Image Studio results. Edits preserve the original asset and canvas, use the existing image-edit provider path, show a signed cost estimate and save a separate library result. No pixel-perfect preservation or free editing is promised. Existing authorization, budgets and retry controls remain in force. Production web release `a03e355` is verified; no migration, new environment setting or worker deployment.
 
 - 2026-11-22: Image Studio shows selected reference images in a responsive contain-fit gallery and accepts direct PNG/JPEG/WebP uploads with progress. Completed uploads are selected automatically without replacing existing references. Shared upload authorization, actual-content validation and generation limits are reused. Production web release `1a4d6e3` is verified; no migration, environment change or worker deployment.
 
