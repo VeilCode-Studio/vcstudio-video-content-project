@@ -138,3 +138,9 @@ export {
   RESEARCH_MEDIA_ANALYSIS_SYSTEM,
   researchMediaAnalysisPrompt,
 } from "./research-media-analysis";
+
+export {
+  IMAGE_EDIT_INSTRUCTIONS_VERSION,
+  renderImageEditInstructions,
+  readImageEditInstructions,
+} from "./image-edit";

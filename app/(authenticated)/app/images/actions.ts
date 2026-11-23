@@ -10,6 +10,11 @@ import {
 import { LibraryImageError } from "@/db/commands/library-image-jobs";
 import { McpError } from "@/lib/mcp/errors";
 import {
+  getStudioImageSource,
+  quoteStudioImageEdit,
+  startStudioImageEdit,
+} from "@/lib/image-studio/edit-service";
+import {
   AuthenticationRequiredError,
   WorkspaceAccessDeniedError,
   WorkspacePermissionDeniedError,
@@ -64,4 +69,20 @@ export async function imageHistoryAction(
       trackedIds ? z.array(z.uuid()).max(4).parse(trackedIds) : [],
     ),
   );
+}
+
+export async function imageSourceAction(workspaceId: unknown, id: unknown) {
+  return result(() => getStudioImageSource(workspaceId, id));
+}
+export async function quoteImageEditAction(
+  workspaceId: unknown,
+  input: unknown,
+) {
+  return result(() => quoteStudioImageEdit(workspaceId, input));
+}
+export async function startImageEditAction(
+  workspaceId: unknown,
+  input: unknown,
+) {
+  return result(() => startStudioImageEdit(workspaceId, input));
 }

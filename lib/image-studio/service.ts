@@ -1,3 +1,4 @@
+import { readImageEditInstructions } from "@studio/prompts";
 import "server-only";
 import { z } from "zod";
 import { tasks } from "@trigger.dev/sdk";
@@ -201,7 +202,7 @@ export async function imageStudioHistory(
       return {
         id: job.id,
         title: request.title || "Generated image",
-        prompt: request.prompt,
+        prompt: readImageEditInstructions(request.prompt) ?? request.prompt,
         status: job.status,
         estimatedCostCents: job.estimatedCostCents,
         actualCostCents: job.actualCostCents,

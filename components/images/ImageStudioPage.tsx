@@ -388,6 +388,9 @@ export function ImageStudioPage({
               <ImageStudioJobCard
                 key={job.id}
                 job={job}
+                workspaceId={workspaceId}
+                canEdit={canGenerate && options.enabled}
+                onCreated={() => refresh()}
                 canRetry={canGenerate && options.enabled && job.canRetry}
                 onRetry={async () => {
                   try {

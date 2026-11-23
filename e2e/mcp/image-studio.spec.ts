@@ -358,3 +358,211 @@ test("upload errors preserve selected references and allow the same file to retr
   await expect(page.getByRole("alert")).toHaveCount(0);
   expect(attempts).toBe(2);
 });
+
+for (const theme of ["light", "dark"])
+  test(`created image viewer and edit preserve originals in ${theme}`, async ({
+    page,
+  }, testInfo) => {
+    await page.setViewportSize({
+      width: theme === "dark" ? 390 : 1440,
+      height: 900,
+    });
+    await page.addInitScript(
+      (t) =>
+        document.addEventListener("DOMContentLoaded", () =>
+          document.documentElement.classList.toggle("dark", t === "dark"),
+        ),
+      theme,
+    );
+    await page.goto("/image-studio.html?ready=1");
+    expect(
+      await page.evaluate(() => localStorage.getItem("imageSourceReads")),
+    ).toBeNull();
+    const view = page.getByRole("button", {
+      name: "View image Studio original",
+      exact: true,
+    });
+    await view.focus();
+    await page.keyboard.press("Enter");
+    const viewer = page.getByRole("dialog", {
+      name: "Studio original",
+      exact: true,
+    });
+    await expect(viewer).toBeVisible();
+    const image = viewer.getByRole("img", {
+      name: "Studio original",
+      exact: true,
+    });
+    await expect(image).toBeVisible();
+    expect(await image.evaluate((el) => getComputedStyle(el).objectFit)).toBe(
+      "contain",
+    );
+    expect((await viewer.boundingBox())!.width).toBeGreaterThan(
+      theme === "dark" ? 300 : 1000,
+    );
+    await viewer
+      .getByRole("button", { name: "Edit image", exact: true })
+      .click();
+    const edit = page.getByRole("dialog", { name: "Edit image", exact: true });
+    await expect(edit).toBeVisible();
+    await expect(edit.getByRole("img")).toBeVisible();
+    await edit
+      .getByLabel("What would you like to change?", { exact: true })
+      .fill("Change only the background to beige.");
+    await edit
+      .getByRole("button", { name: "Review edit estimate", exact: true })
+      .click();
+    await expect(
+      edit.getByText("Edit estimate $0.08", { exact: true }),
+    ).toBeVisible();
+    expect(
+      await page.evaluate(() => localStorage.getItem("imageEditAttempts")),
+    ).toBeNull();
+    const bounds = await edit.boundingBox();
+    expect(bounds!.y).toBeGreaterThanOrEqual(0);
+    expect(bounds!.y + bounds!.height).toBeLessThanOrEqual(901);
+    await page.screenshot({
+      path: testInfo.outputPath(`image-edit-${theme}.png`),
+      fullPage: true,
+    });
+    await edit
+      .getByRole("button", { name: "Create edited version", exact: true })
+      .click();
+    await expect(edit).toHaveCount(0);
+    await page.keyboard.press("Escape");
+    await expect(viewer).toHaveCount(0);
+    await expect(
+      page.getByRole("heading", { name: "Studio original", exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("heading", {
+        name: "Studio original (edit)",
+        exact: true,
+      }),
+    ).toBeVisible();
+    const attempt = JSON.parse(
+      (await page.evaluate(() => localStorage.getItem("imageEditAttempts")))!,
+    )[0];
+    expect(attempt.edit.sourceJobId).toBe(videoImageAsset.id);
+    expect(attempt.edit.instructions).toBe(
+      "Change only the background to beige.",
+    );
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
+  });
+test("viewer Escape returns focus and opens no paid request", async ({
+  page,
+}) => {
+  await page.goto("/image-studio.html?ready=1");
+  const trigger = page.getByRole("button", {
+    name: "View image Studio original",
+    exact: true,
+  });
+  await trigger.click();
+  await expect(page.getByRole("dialog")).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(trigger).toBeFocused();
+  expect(
+    await page.evaluate(() => localStorage.getItem("imageEditQuoted")),
+  ).toBeNull();
+});
+test("editing instructions invalidate a quote and failed execution reuses its key", async ({
+  page,
+}) => {
+  await page.goto("/image-studio.html?ready=1");
+  await page.getByRole("button", { name: "Edit image", exact: true }).click();
+  const edit = page.getByRole("dialog", { name: "Edit image", exact: true });
+  await edit
+    .getByLabel("What would you like to change?", { exact: true })
+    .fill("Make the sky blue");
+  await edit
+    .getByRole("button", { name: "Review edit estimate", exact: true })
+    .click();
+  await expect(
+    edit.getByRole("button", { name: "Create edited version", exact: true }),
+  ).toBeVisible();
+  await edit
+    .getByLabel("What would you like to change?", { exact: true })
+    .fill("Make the sky orange");
+  await expect(
+    edit.getByRole("button", { name: "Create edited version", exact: true }),
+  ).toHaveCount(0);
+  await edit
+    .getByRole("button", { name: "Review edit estimate", exact: true })
+    .click();
+  await page.evaluate(() => localStorage.setItem("edit-save-error", "true"));
+  await edit
+    .getByRole("button", { name: "Create edited version", exact: true })
+    .click();
+  await expect(edit.getByRole("alert")).toContainText("Retry the same request");
+  await expect(
+    edit.getByLabel("What would you like to change?", { exact: true }),
+  ).toHaveValue("Make the sky orange");
+  await page.evaluate(() => localStorage.removeItem("edit-save-error"));
+  await edit
+    .getByRole("button", { name: "Create edited version", exact: true })
+    .click();
+  await expect(edit).toHaveCount(0);
+  const calls = JSON.parse(
+    (await page.evaluate(() => localStorage.getItem("imageEditAttempts")))!,
+  );
+  expect(calls[0].idempotencyKey).toBe(calls[1].idempotencyKey);
+});
+test("missing source keeps editing blocked with useful feedback", async ({
+  page,
+}) => {
+  await page.goto("/image-studio.html?ready=1&source-error=1");
+  await page.getByRole("button", { name: "Edit image", exact: true }).click();
+  const edit = page.getByRole("dialog", { name: "Edit image", exact: true });
+  await expect(edit.getByRole("alert")).toContainText("no longer available");
+  await expect(
+    edit.getByRole("button", { name: "Review edit estimate", exact: true }),
+  ).toBeDisabled();
+});
+test("viewers can enlarge images but cannot edit them", async ({ page }) => {
+  await page.goto("/image-studio.html?ready=1&mode=viewer");
+  await expect(
+    page.getByRole("button", { name: "Edit image", exact: true }),
+  ).toBeDisabled();
+  await page
+    .getByRole("button", { name: "View image Studio original", exact: true })
+    .click();
+  await expect(page.getByRole("dialog")).toBeVisible();
+  await expect(
+    page
+      .getByRole("dialog")
+      .getByRole("button", { name: "Edit image", exact: true }),
+  ).toBeDisabled();
+});
+
+test("a failed viewer preview refreshes its private URL without generation", async ({
+  page,
+}) => {
+  await page.route("https://missing.example/studio.png", (route) =>
+    route.fulfill({ status: 403, body: "expired" }),
+  );
+  await page.goto("/image-studio.html?ready=1&preview-error=1");
+  await page
+    .getByRole("button", { name: "View image Studio original", exact: true })
+    .click();
+  const viewer = page.getByRole("dialog", {
+    name: "Studio original",
+    exact: true,
+  });
+  await expect(viewer.getByRole("alert")).toContainText("could not load");
+  await viewer
+    .getByRole("button", { name: "Retry preview", exact: true })
+    .click();
+  await expect(viewer.getByRole("alert")).toHaveCount(0);
+  await expect(viewer.getByRole("img")).toBeVisible();
+  expect(
+    await page.evaluate(() => localStorage.getItem("imageEditAttempts")),
+  ).toBeNull();
+  expect(
+    await page.evaluate(() => localStorage.getItem("imageSourceReads")),
+  ).toBe("1");
+});

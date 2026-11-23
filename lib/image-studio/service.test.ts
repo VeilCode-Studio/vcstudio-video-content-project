@@ -1,3 +1,4 @@
+import { renderImageEditInstructions } from "@studio/prompts";
 import { beforeEach, afterEach, describe, expect, it, vi } from "vitest";
 import { mcpIds } from "@/lib/test-utils/mcp-fixtures";
 import { createOAuthState } from "@/lib/publishing/oauth-state";
@@ -277,4 +278,26 @@ it("bounds explicit status tracking to queue capacity", async () => {
     imageStudioHistory(ws, undefined, Array(5).fill(id)),
   ).rejects.toThrow();
   expect(m.find).not.toHaveBeenCalled();
+});
+
+it("shows requested edit text without exposing internal prompt instructions", async () => {
+  const prompt = renderImageEditInstructions("Change the sky to orange.");
+  const saved = { ...request, prompt, referenceAssetIds: [id] };
+  m.list.mockResolvedValue([
+    {
+      id,
+      userId: user,
+      request: saved,
+      status: "succeeded",
+      attemptCount: 1,
+      estimatedCostCents: 8,
+      actualCostCents: 7,
+      safeErrorMessage: null,
+      createdAt: new Date(),
+    },
+  ]);
+  expect((await imageStudioHistory(ws))[0]!.prompt).toBe(
+    "Change the sky to orange.",
+  );
+  expect(saved.prompt).toBe(prompt);
 });

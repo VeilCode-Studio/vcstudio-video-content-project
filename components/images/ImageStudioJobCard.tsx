@@ -1,5 +1,3 @@
-/* Private signed original URLs do not use Next's public image cache. */
-/* eslint-disable @next/next/no-img-element */
 "use client";
 import { useState } from "react";
 import { Loader2Icon } from "lucide-react";
@@ -7,13 +5,21 @@ import type { StudioImageJob } from "@studio/contracts/image-studio";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { ImageStudioImageViewer } from "./ImageStudioImageViewer";
+import { ImageStudioEditDialog } from "./ImageStudioEditDialog";
 import { MediaDownloadButton } from "@/components/social/MediaDownloadButton";
 export function ImageStudioJobCard({
   job,
+  workspaceId,
+  canEdit,
+  onCreated,
   canRetry,
   onRetry,
 }: {
   job: StudioImageJob;
+  workspaceId: string;
+  canEdit: boolean;
+  onCreated: () => Promise<void>;
   canRetry: boolean;
   onRetry: () => Promise<void>;
 }) {
@@ -31,11 +37,11 @@ export function ImageStudioJobCard({
           </Badge>
         </div>
         {job.previewUrl ? (
-          <img
-            loading="lazy"
-            src={job.previewUrl}
-            alt={job.title}
-            className="aspect-square w-full rounded-lg bg-muted object-contain"
+          <ImageStudioImageViewer
+            workspaceId={workspaceId}
+            job={job}
+            canEdit={canEdit}
+            onCreated={onCreated}
           />
         ) : job.status === "queued" || job.status === "running" ? (
           <div className="flex aspect-square items-center justify-center rounded-lg bg-muted">
@@ -62,12 +68,20 @@ export function ImageStudioJobCard({
           </p>
         ) : null}
         {job.previewUrl ? (
-          <MediaDownloadButton
-            asset={{
-              id: job.id,
-              title: job.title,
-            }}
-          />
+          <div className="flex flex-wrap gap-2">
+            <MediaDownloadButton
+              asset={{
+                id: job.id,
+                title: job.title,
+              }}
+            />
+            <ImageStudioEditDialog
+              workspaceId={workspaceId}
+              jobId={job.id}
+              disabled={!canEdit}
+              onCreated={onCreated}
+            />
+          </div>
         ) : null}
         {job.status === "queued" && canRetry ? (
           <Button

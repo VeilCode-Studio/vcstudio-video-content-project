@@ -42,3 +42,19 @@ export const studioImageCursorSchema = z.object({
   createdAt: z.iso.datetime(),
   id: z.uuid(),
 });
+
+export const studioImageEditSchema = z.object({
+  sourceJobId: z.uuid(),
+  instructions: z
+    .string()
+    .trim()
+    .min(1, "Describe the changes you want.")
+    .max(20000),
+  quality: imageGenerationQualitySchema,
+});
+export const studioImageEditStartSchema = z.object({
+  edit: studioImageEditSchema,
+  quote: z.string().max(16000),
+  idempotencyKey: z.uuid(),
+});
+export type StudioImageEdit = z.infer<typeof studioImageEditSchema>;

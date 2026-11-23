@@ -1,4 +1,5 @@
 import { ImageStudioPage } from "@/components/images/ImageStudioPage";
+import { initialImageJobs } from "./MockImageActions";
 export function ImageStudioHarness() {
   const mode = new URLSearchParams(location.search).get("mode");
   return (
@@ -12,7 +13,7 @@ export function ImageStudioHarness() {
         maxReferenceBytes: 20 * 1024 * 1024,
         maxImageBytes: 25 * 1024 * 1024,
       }}
-      initialJobs={[]}
+      initialJobs={initialImageJobs}
     />
   );
 }

@@ -6,7 +6,7 @@ This repository is the foundation for an internal production tool that converts 
 
 ## Current capabilities
 
-- **Independent Image Studio:** `/app/images` creates standalone library images from a prompt and optional references, with a signed cost review, quality/canvas choices, visual reference thumbnails, direct reference uploads, durable progress and downloads. It reuses OpenAI image configuration and workspace accounting. See [setup and operating behavior](docs/image-studio.md).
+- **Independent Image Studio:** `/app/images` creates standalone library images from a prompt and optional references, with a signed cost review, quality/canvas choices, visual reference thumbnails, direct reference uploads, a large image viewer, source-based image edits, durable progress and downloads. It reuses OpenAI image configuration and workspace accounting. See [setup and operating behavior](docs/image-studio.md).
 
 - **Pinterest (Production Trial):** account OAuth/reconnection, public-board selection, one-image/video Pins, immutable Social scheduling and MCP publishing share existing authorization and approval modes. Safe code/example defaults are `ENABLE_PINTEREST=false` and `PINTEREST_ACCESS_TIER=pending`. Production web and worker settings use the owner's approved Trial tier. Trial Pins are creator-visible only. See [setup, limits and rollout](docs/pinterest-publishing.md).
 
@@ -650,6 +650,8 @@ The [version-two YouTube production plan](docs/version-two/README.md) defines th
 Phases 1–12 are implemented through authenticated workspaces, project/script versioning, durable AI scene planning, workspace character consistency references, cost-controlled media generation, deterministic subtitles, Remotion rendering, operational hardening, inspectable knowledge ingestion, and normalized publication-performance feedback. Marketing Studio includes Slice 13 orchestration: `social_media_manager` creates bounded, review-only weekly draft sets through the existing shared budget and capability controls, and the persisted weekly digest makes generation, human review, spend/refusal, scheduler, integration, Google Business sync, and acknowledgement outcomes measurable even in a zero-activity week. Slice 14 evidence-gated autonomous approval remains intentionally unbuilt.
 
 ## Recent major changes
+
+- 2026-11-23: Added a responsive shadcn modal viewer and source-based Edit image flow to Image Studio results. Edits preserve the original asset and canvas, use the existing image-edit provider path, show a signed cost estimate and save a separate library result. No pixel-perfect preservation or free editing is promised. Existing authorization, budgets and retry controls remain in force; no migration, new environment setting or worker deployment.
 
 - 2026-11-22: Image Studio shows selected reference images in a responsive contain-fit gallery and accepts direct PNG/JPEG/WebP uploads with progress. Completed uploads are selected automatically without replacing existing references. Shared upload authorization, actual-content validation and generation limits are reused. Production web release `1a4d6e3` is verified; no migration, environment change or worker deployment.
 
