@@ -6,7 +6,7 @@ export function Table({ className, ...props }: ComponentProps<"table">) {
   return (
     <div
       data-slot="table-container"
-      className="relative w-full min-w-0 overflow-x-auto rounded-xl border"
+      className="relative w-full min-w-0 overflow-x-auto rounded-2xl border"
     >
       <table
         data-slot="table"

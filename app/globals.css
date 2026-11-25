@@ -9,10 +9,15 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-sans);
+  /*
+   * Was `var(--font-sans)`, a self-reference that resolved to nothing, so the
+   * whole application fell back to the browser's default serif face.
+   */
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono);
-  --font-heading: var(--font-sans);
-  --font-display: Georgia, "Times New Roman", serif;
+  /* Heavy geometric display face for page titles and card headings. */
+  --font-heading: var(--font-outfit), var(--font-geist-sans), sans-serif;
+  --font-display: var(--font-outfit), var(--font-geist-sans), sans-serif;
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -74,20 +79,25 @@
    * autofill backgrounds along with them.
    */
   color-scheme: light;
-  --background: oklch(0.975 0.014 88);
-  --foreground: oklch(0.245 0.052 174);
-  --card: oklch(0.995 0.006 88);
-  --card-foreground: oklch(0.245 0.052 174);
-  --popover: oklch(0.995 0.006 88);
-  --popover-foreground: oklch(0.245 0.052 174);
-  --primary: oklch(0.87 0.205 121);
-  --primary-foreground: oklch(0.205 0.052 174);
-  --secondary: oklch(0.94 0.025 158);
-  --secondary-foreground: oklch(0.245 0.052 174);
-  --muted: oklch(0.95 0.018 92);
-  --muted-foreground: oklch(0.5 0.027 174);
-  --accent: oklch(0.91 0.052 52);
-  --accent-foreground: oklch(0.36 0.09 42);
+  /*
+   * Studio palette: cool neutral surfaces with a single cyan accent. In Light
+   * the accent is deepened so white text on it and cyan links on white both
+   * keep at least 4.5:1 contrast.
+   */
+  --background: oklch(0.972 0.004 250);
+  --foreground: oklch(0.2 0.015 262);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.2 0.015 262);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.2 0.015 262);
+  --primary: oklch(0.55 0.13 234);
+  --primary-foreground: oklch(0.99 0 0);
+  --secondary: oklch(0.935 0.007 252);
+  --secondary-foreground: oklch(0.2 0.015 262);
+  --muted: oklch(0.948 0.005 252);
+  --muted-foreground: oklch(0.49 0.016 258);
+  --accent: oklch(0.93 0.035 226);
+  --accent-foreground: oklch(0.34 0.085 234);
   --destructive: oklch(0.577 0.245 27.325);
   /**
    * Notice tones for the composer's per-destination messages, as real tokens
@@ -109,41 +119,45 @@
   --notice-warning: oklch(0.93 0.095 82);
   --notice-warning-foreground: oklch(0.43 0.11 62);
   --notice-warning-edge: oklch(0.8 0.15 78);
-  --border: oklch(0.87 0.025 162 / 72%);
-  --input: oklch(0.86 0.026 162 / 82%);
-  --ring: oklch(0.56 0.11 174);
-  --chart-1: oklch(0.87 0.205 121);
-  --chart-2: oklch(0.63 0.14 174);
+  --border: oklch(0.2 0.02 262 / 10%);
+  --input: oklch(0.2 0.02 262 / 15%);
+  --ring: oklch(0.62 0.13 232);
+  --chart-1: oklch(0.6 0.13 232);
+  --chart-2: oklch(0.65 0.13 175);
   --chart-3: oklch(0.7 0.16 48);
-  --chart-4: oklch(0.68 0.12 255);
-  --chart-5: oklch(0.72 0.12 326);
-  --radius: 0.875rem;
-  --sidebar: oklch(0.995 0.006 88);
-  --sidebar-foreground: oklch(0.245 0.052 174);
-  --sidebar-primary: oklch(0.87 0.205 121);
-  --sidebar-primary-foreground: oklch(0.205 0.052 174);
-  --sidebar-accent: oklch(0.93 0.028 157);
-  --sidebar-accent-foreground: oklch(0.245 0.052 174);
-  --sidebar-border: oklch(0.86 0.026 162 / 70%);
-  --sidebar-ring: oklch(0.56 0.11 174);
+  --chart-4: oklch(0.6 0.15 290);
+  --chart-5: oklch(0.68 0.15 340);
+  --radius: 1rem;
+  --sidebar: oklch(0.995 0.002 250);
+  --sidebar-foreground: oklch(0.2 0.015 262);
+  --sidebar-primary: oklch(0.55 0.13 234);
+  --sidebar-primary-foreground: oklch(0.99 0 0);
+  --sidebar-accent: oklch(0.925 0.04 226);
+  --sidebar-accent-foreground: oklch(0.3 0.085 234);
+  --sidebar-border: oklch(0.2 0.02 262 / 9%);
+  --sidebar-ring: oklch(0.62 0.13 232);
+  /* Canvas glow tints, drawn behind every page. */
+  --glow-cool: oklch(0.75 0.11 210);
+  --glow-warm: oklch(0.72 0.12 330);
 }
 
 .dark {
   color-scheme: dark;
-  --background: oklch(0.17 0.028 174);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.22 0.032 174);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.22 0.032 174);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.84 0.19 121);
-  --primary-foreground: oklch(0.18 0.04 174);
-  --secondary: oklch(0.29 0.038 174);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.28 0.032 174);
-  --muted-foreground: oklch(0.72 0.025 164);
-  --accent: oklch(0.35 0.07 48);
-  --accent-foreground: oklch(0.985 0 0);
+  /* Charcoal surfaces stepped by lightness, with a bright cyan accent. */
+  --background: oklch(0.185 0.006 265);
+  --foreground: oklch(0.97 0.003 250);
+  --card: oklch(0.232 0.008 265);
+  --card-foreground: oklch(0.97 0.003 250);
+  --popover: oklch(0.245 0.009 265);
+  --popover-foreground: oklch(0.97 0.003 250);
+  --primary: oklch(0.79 0.145 226);
+  --primary-foreground: oklch(0.17 0.02 245);
+  --secondary: oklch(0.285 0.009 265);
+  --secondary-foreground: oklch(0.97 0.003 250);
+  --muted: oklch(0.262 0.008 265);
+  --muted-foreground: oklch(0.73 0.012 258);
+  --accent: oklch(0.33 0.058 226);
+  --accent-foreground: oklch(0.93 0.05 220);
   --destructive: oklch(0.704 0.191 22.216);
   /* Fills sit above `--muted` (0.269) so a notice separates from the card. */
   --notice-ready: oklch(0.31 0.06 158);
@@ -155,22 +169,24 @@
   --notice-warning: oklch(0.35 0.085 75);
   --notice-warning-foreground: oklch(0.9 0.1 88);
   --notice-warning-edge: oklch(0.56 0.13 78);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.76 0.14 121);
-  --chart-1: oklch(0.84 0.19 121);
-  --chart-2: oklch(0.68 0.13 174);
-  --chart-3: oklch(0.72 0.15 48);
-  --chart-4: oklch(0.7 0.12 255);
-  --chart-5: oklch(0.72 0.12 326);
-  --sidebar: oklch(0.2 0.034 174);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.84 0.19 121);
-  --sidebar-primary-foreground: oklch(0.18 0.04 174);
-  --sidebar-accent: oklch(0.29 0.038 174);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.76 0.14 121);
+  --border: oklch(1 0 0 / 9%);
+  --input: oklch(1 0 0 / 13%);
+  --ring: oklch(0.79 0.145 226);
+  --chart-1: oklch(0.79 0.145 226);
+  --chart-2: oklch(0.72 0.13 175);
+  --chart-3: oklch(0.74 0.15 55);
+  --chart-4: oklch(0.7 0.14 290);
+  --chart-5: oklch(0.74 0.14 340);
+  --sidebar: oklch(0.162 0.006 265);
+  --sidebar-foreground: oklch(0.95 0.004 250);
+  --sidebar-primary: oklch(0.79 0.145 226);
+  --sidebar-primary-foreground: oklch(0.17 0.02 245);
+  --sidebar-accent: oklch(0.31 0.058 228);
+  --sidebar-accent-foreground: oklch(0.97 0.01 220);
+  --sidebar-border: oklch(1 0 0 / 8%);
+  --sidebar-ring: oklch(0.79 0.145 226);
+  --glow-cool: oklch(0.55 0.1 200);
+  --glow-warm: oklch(0.5 0.12 330);
 }
 
 @layer base {
@@ -179,18 +195,6 @@
   }
   body {
     @apply bg-background text-foreground;
-    background-image:
-      radial-gradient(
-        circle at 10% 10%,
-        color-mix(in oklch, var(--primary) 7%, transparent) 0,
-        transparent 28rem
-      ),
-      radial-gradient(
-        circle at 92% 4%,
-        color-mix(in oklch, var(--accent) 13%, transparent) 0,
-        transparent 24rem
-      );
-    background-attachment: fixed;
   }
   html {
     @apply font-sans;
@@ -198,18 +202,45 @@
 }
 
 @layer utilities {
+  /*
+   * The canvas every page sits on: a flat studio surface lit by two soft
+   * glows — cool from the lower left, warm from the right — so large empty
+   * areas read as depth rather than as a blank panel.
+   */
   .app-shell {
     background-color: var(--background);
     background-image:
-      linear-gradient(
-        115deg,
-        transparent 0 62%,
-        color-mix(in oklch, var(--primary) 3%, transparent) 100%
+      radial-gradient(
+        ellipse 70% 60% at 18% 100%,
+        color-mix(in oklch, var(--glow-cool) 16%, transparent) 0,
+        transparent 70%
       ),
-      repeating-linear-gradient(
-        0deg,
-        transparent 0 5px,
-        color-mix(in oklch, var(--foreground) 1.6%, transparent) 6px
+      radial-gradient(
+        ellipse 55% 55% at 88% 45%,
+        color-mix(in oklch, var(--glow-warm) 10%, transparent) 0,
+        transparent 70%
       );
+    background-attachment: fixed;
   }
+
+  /* Small uppercase section label, as used above grouped lists. */
+  .app-eyebrow {
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted-foreground);
+  }
+}
+
+/*
+ * Page titles across the authenticated app use the display face at a heavy
+ * weight. Deliberately unlayered: each page sets its own `font-semibold` and
+ * size utilities, and an unlayered rule outranks those layered utilities, so
+ * the weight and face change everywhere while every page keeps its size.
+ */
+.app-shell main h1 {
+  font-family: var(--font-display);
+  font-weight: 800;
+  letter-spacing: -0.03em;
 }

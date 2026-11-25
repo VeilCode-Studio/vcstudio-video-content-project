@@ -25,10 +25,10 @@ export function DashboardStatCard({
       <div className="flex items-center justify-between">
         <span
           className={cn(
-            "flex size-9 items-center justify-center rounded-lg ring-1 ring-inset",
+            "flex size-10 items-center justify-center rounded-full",
             accent
-              ? "bg-primary/10 text-primary ring-primary/20"
-              : "bg-muted text-muted-foreground ring-foreground/10",
+              ? "bg-primary/15 text-primary"
+              : "bg-secondary text-muted-foreground",
           )}
         >
           <Icon aria-hidden className="size-4.5" />
@@ -41,7 +41,7 @@ export function DashboardStatCard({
         ) : null}
       </div>
       <p className="mt-4 text-sm text-muted-foreground">{label}</p>
-      <p className="mt-1 font-mono text-3xl font-semibold tracking-tight tabular-nums">
+      <p className="mt-1 font-display text-3xl font-bold tracking-[-0.02em] tabular-nums">
         {value}
       </p>
       <p className="mt-1.5 text-xs text-muted-foreground">{detail}</p>
@@ -49,9 +49,9 @@ export function DashboardStatCard({
   );
 
   const className = cn(
-    "group/stat rounded-2xl bg-card/96 p-5 shadow-lg shadow-foreground/5 ring-1 ring-border/80 transition-all duration-200",
+    "group/stat rounded-3xl bg-card p-6 ring-1 ring-border transition-[box-shadow,background-color] duration-200",
     href &&
-      "hover:-translate-y-1 hover:ring-ring/35 hover:shadow-xl hover:shadow-foreground/10",
+      "outline-none hover:bg-[color-mix(in_oklch,var(--card),var(--foreground)_3%)] hover:ring-ring/40 focus-visible:ring-3 focus-visible:ring-ring",
   );
 
   if (href) {
