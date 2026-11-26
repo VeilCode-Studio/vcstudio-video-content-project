@@ -1,8 +1,9 @@
 # Project memory
 
-## Latest update — docked sidebar (26 November 2026; verification in progress)
+## Latest update — docked sidebar (26 November 2026; production verified)
 
 - Owner requested removal of the sidebar's surrounding margin. `ApplicationSidebar` now uses the existing shadcn `sidebar` variant instead of `inset`, removing the floating container padding and outer corner treatment through the primitive's supported API. `app/spacing.css` keeps the shell-height inset at zero at desktop as well as mobile, matching the docked layout. Content gutters and mobile Sheet behavior remain owned by existing shared primitives. No database, environment, provider or worker changes; Marketing remains paused. Verify and deploy within the existing authorized production workflow.
+- Released/pushed `a4840d663575707eb1bddf5d0d7291a728ff1122`. Vercel deployment `dpl_Eyonz9hZbdjyhcwzfCu69Z5MzL4e` is READY and the canonical domain resolves to that exact SHA. Verification: 17 existing navigation tests, six actual-ApplicationSidebar browser layout checks (Light/Dark expanded, collapsed and mobile; zero browser errors or horizontal overflow), formatting, full lint (three existing warnings), TypeScript, environment validation and production build passed. Initial deployment-scoped error/fatal counts are empty. Verification used mocked Clerk/actions, no live provider/worker/database work. Ignored evidence is `.vercel/sidebar-layout-results.json` and `.vercel/docked-sidebar-release.json`; the temporary browser-check script is archived as `.mjs.txt`. Only the private untracked `.claude/settings.local.json` remains outside the requested changes.
 
 ## Latest update — compact Social platform filter (26 November 2026; production verified)
 
