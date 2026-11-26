@@ -46,6 +46,14 @@ import { ResearchSnapshotPanel } from "./ResearchSnapshotPanel";
 import { researchDate } from "@/lib/social/research/view";
 import { ResearchAuthorizationFeedback } from "./ResearchAuthorizationFeedback";
 import { DeleteResearchAccountDialog } from "./DeleteResearchAccountDialog";
+import { ResearchCategoryManager } from "./ResearchCategoryManager";
+import { ResearchCategoryFilter } from "./ResearchCategoryFilter";
+import { ResearchAccountCategory } from "./ResearchAccountCategory";
+import type {
+  ResearchCategoryView,
+  ResearchCategoryFilter as CategoryFilter,
+} from "@studio/contracts/research-categories";
+import { researchAccountsHref } from "@/lib/social/research/organization";
 
 export type ResearchWorkspaceProps = {
   enabled: boolean;
@@ -53,6 +61,8 @@ export type ResearchWorkspaceProps = {
   canResearch: boolean;
   connection: ResearchConnectionView;
   accounts: ResearchAccountView[];
+  categories?: ResearchCategoryView[];
+  categoryFilter?: CategoryFilter;
   selected: ResearchAccountView | null;
   snapshots: ResearchSnapshotView[];
   observationId: string | null;
@@ -68,6 +78,8 @@ export type ResearchWorkspaceProps = {
 export function ResearchWorkspace(initialProps: ResearchWorkspaceProps) {
   const selection = useResearchSelection(initialProps);
   const props = { ...initialProps, ...selection };
+  const categories = props.categories ?? [];
+  const categoryFilter = props.categoryFilter ?? "all";
   const router = useRouter();
   const [pending, start] = useTransition();
   const busy = useRef(false);
@@ -135,7 +147,16 @@ export function ResearchWorkspace(initialProps: ResearchWorkspaceProps) {
               Keyword research
             </Button>
           ) : null}
-          {props.enabled && props.canResearch ? <ResearchAccountForm /> : null}
+          {props.enabled && props.canResearch ? (
+            <ResearchAccountForm
+              categories={categories}
+              defaultCategoryId={
+                categoryFilter === "all" || categoryFilter === "uncategorized"
+                  ? null
+                  : categoryFilter
+              }
+            />
+          ) : null}
         </div>
       </header>
       {props.authorization ? (
@@ -213,6 +234,13 @@ export function ResearchWorkspace(initialProps: ResearchWorkspaceProps) {
               {props.accounts.length} on this page
             </Badge>
           </div>
+          <ResearchCategoryFilter
+            categories={categories}
+            value={categoryFilter}
+          />
+          {props.enabled && props.canResearch ? (
+            <ResearchCategoryManager categories={categories} />
+          ) : null}
           {props.accounts.length ? (
             <nav className="flex flex-col gap-2" aria-label="Research accounts">
               {props.accounts.map((account) => (
@@ -233,7 +261,11 @@ export function ResearchWorkspace(initialProps: ResearchWorkspaceProps) {
                     setArchiveOpen(false);
                     void selection.select(event.currentTarget.href);
                   }}
-                  href={`/app/social/research?account=${account.id}&page=${props.page}`}
+                  href={researchAccountsHref({
+                    accountId: account.id,
+                    page: props.page,
+                    category: categoryFilter,
+                  })}
                   aria-current={
                     (selection.loading ?? selected?.id) === account.id
                       ? "page"
@@ -243,6 +275,11 @@ export function ResearchWorkspace(initialProps: ResearchWorkspaceProps) {
                 >
                   <span className="break-words font-medium">
                     {account.name}
+                  </span>
+                  <span className="text-xs text-muted-foreground">
+                    {categories.find(
+                      (category) => category.id === account.categoryId,
+                    )?.name ?? "Uncategorized"}
                   </span>
                   <span className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                     <Badge variant="outline">{account.platform}</Badge>
@@ -274,7 +311,10 @@ export function ResearchWorkspace(initialProps: ResearchWorkspaceProps) {
             {props.page > 0 ? (
               <Link
                 className="underline underline-offset-4"
-                href={`/app/social/research?page=${props.page - 1}`}
+                href={researchAccountsHref({
+                  page: props.page - 1,
+                  category: categoryFilter,
+                })}
               >
                 Previous accounts
               </Link>
@@ -282,7 +322,10 @@ export function ResearchWorkspace(initialProps: ResearchWorkspaceProps) {
             {props.hasMoreAccounts ? (
               <Link
                 className="underline underline-offset-4"
-                href={`/app/social/research?page=${props.page + 1}`}
+                href={researchAccountsHref({
+                  page: props.page + 1,
+                  category: categoryFilter,
+                })}
               >
                 Next accounts
               </Link>
@@ -344,6 +387,13 @@ export function ResearchWorkspace(initialProps: ResearchWorkspaceProps) {
                     </div>
                   ) : null}
                 </div>
+                {props.canResearch ? (
+                  <ResearchAccountCategory
+                    key={`${selected.id}:${selected.version}`}
+                    account={selected}
+                    categories={categories}
+                  />
+                ) : null}
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
                   {selected.platform === "instagram" ? (
                     <div className="flex min-w-0 flex-1 flex-col gap-2">
@@ -407,7 +457,11 @@ export function ResearchWorkspace(initialProps: ResearchWorkspaceProps) {
                             "Observation saved. Comparisons now use this snapshot.",
                           );
                           router.replace(
-                            `/app/social/research?account=${selected.id}&page=${props.page}`,
+                            researchAccountsHref({
+                              accountId: selected.id,
+                              page: props.page,
+                              category: categoryFilter,
+                            }),
                           );
                           router.refresh();
                         } catch {
@@ -462,7 +516,13 @@ export function ResearchWorkspace(initialProps: ResearchWorkspaceProps) {
                       value={snapshot.id}
                       onValueChange={(id) =>
                         selection.select(
-                          `/app/social/research?account=${selected.id}&page=${props.page}&historyPage=${props.historyPage}&observation=${id}`,
+                          researchAccountsHref({
+                            accountId: selected.id,
+                            page: props.page,
+                            category: categoryFilter,
+                            historyPage: props.historyPage,
+                            observationId: id,
+                          }),
                         )
                       }
                     >
@@ -500,7 +560,12 @@ export function ResearchWorkspace(initialProps: ResearchWorkspaceProps) {
                           event.preventDefault();
                           void selection.select(event.currentTarget.href);
                         }}
-                        href={`/app/social/research?account=${selected.id}&page=${props.page}&historyPage=${props.historyPage - 1}`}
+                        href={researchAccountsHref({
+                          accountId: selected.id,
+                          page: props.page,
+                          category: categoryFilter,
+                          historyPage: props.historyPage - 1,
+                        })}
                       >
                         Newer observations
                       </Link>
@@ -521,7 +586,12 @@ export function ResearchWorkspace(initialProps: ResearchWorkspaceProps) {
                           event.preventDefault();
                           void selection.select(event.currentTarget.href);
                         }}
-                        href={`/app/social/research?account=${selected.id}&page=${props.page}&historyPage=${props.historyPage + 1}`}
+                        href={researchAccountsHref({
+                          accountId: selected.id,
+                          page: props.page,
+                          category: categoryFilter,
+                          historyPage: props.historyPage + 1,
+                        })}
                       >
                         Older observations
                       </Link>

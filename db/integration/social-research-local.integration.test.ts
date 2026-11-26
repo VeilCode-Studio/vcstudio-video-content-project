@@ -65,6 +65,12 @@ beforeAll(async () => {
   await pg.exec(
     `create table mcp_operations(id uuid primary key default gen_random_uuid(),workspace_id uuid,kind text,status text,input jsonb,result jsonb,approval_hash text,sealed_source text,fingerprint text,error text,updated_at timestamptz default now());`,
   );
+  await pg.exec(
+    await readFile(
+      "migrations/20261126005534_social_research_categories/migration.sql",
+      "utf8",
+    ),
+  );
   await saveResearchConnection({
     workspaceId,
     connectedByUserId: userId,

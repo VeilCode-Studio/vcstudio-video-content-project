@@ -12,6 +12,9 @@ vi.mock("@/lib/auth/workspace-context", () => ({
   getAuthenticatedWorkspaceContext: mocks.context,
 }));
 vi.mock("./environment", () => ({ isSocialResearchEnabled: mocks.enabled }));
+vi.mock("@/db/repositories/research-categories.repository", () => ({
+  listResearchCategories: vi.fn().mockResolvedValue([]),
+}));
 vi.mock("@/db/repositories/social-research.repository", () => ({
   listResearchAccounts: mocks.accounts,
   getResearchConnection: mocks.connection,
@@ -65,6 +68,6 @@ describe("research route loading", () => {
         account: "bad",
       }),
     });
-    expect(mocks.accounts).toHaveBeenCalledWith("workspace", 0);
+    expect(mocks.accounts).toHaveBeenCalledWith("workspace", 0, "all");
   });
 });

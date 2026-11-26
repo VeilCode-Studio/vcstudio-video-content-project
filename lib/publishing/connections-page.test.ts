@@ -43,6 +43,8 @@ beforeEach(() => {
       externalAccountUrl: null,
       status: "active",
       lastError: null,
+      // Matches `PlatformConnectionSummary`: health is derived from expiry.
+      accessTokenExpiresAt: null,
       updatedAt: new Date("2026-10-31T00:00:00Z"),
     },
   ]);

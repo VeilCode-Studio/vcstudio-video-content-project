@@ -8,6 +8,14 @@ The owner chose **Social research with manual refresh**, official Meta APIs firs
 
 ## Workflow
 
+### Organize accounts
+
+Use **Manage categories** to create or rename workspace-shared categories. The initial categories for existing workspaces are **Competitors**, **Inspiration** and **Industry insights**; the same names are available as suggestions in new workspaces. Choose a category while adding an account, or select an existing account, change **Account category**, and click **Save category**. Each account belongs to at most one category. Owner/editor permissions are required for changes; viewers can browse.
+
+**Browse category** filters the complete workspace watchlist before its existing 20-account pagination. All accounts and Uncategorized remain available. Account and observation links preserve the category selection. Removing a category requires confirmation, moves its accounts to Uncategorized and preserves all observations, analysis and account identities. It does not unfollow or delete a research account. Categories are capped at 50 per workspace with case-insensitive unique names and revision checks. Apply migration `20261126005534_social_research_categories` before releasing the web code; no worker, environment or provider permission change is required.
+
+Organization verification (26 November 2026): 687 affected unit/integration tests and 38 distinct browser journeys passed, including tenant/role isolation, stale revisions, database-enforced category limits, preserved observations, category confirmation/errors, responsive Light/Dark platform groups and mounted-watchlist account selection. Formatting, TypeScript, environment validation and the production build passed; lint retains three existing warnings. A production clone validated the migration and preserved exact business-record digests. Production application of this migration requires owner approval.
+
 1. Open Social → Account research (`/app/social/research`).
 2. An owner separately authorizes **Meta research**. Existing publication credentials, connected destinations, project channel identities and MCP grants are not changed.
 3. An owner/editor adds a public Facebook Page by numeric Page ID or an Instagram professional account by username, with a label and learning notes. Adding an account does not fetch data.

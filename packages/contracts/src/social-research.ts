@@ -29,6 +29,7 @@ export const researchAccountInputSchema = z
     identifier: z.string().trim().min(1).max(100),
     name: z.string().trim().min(1).max(160),
     notes: z.string().trim().max(2000).default(""),
+    categoryId: z.uuid().nullable().optional(),
   })
   .superRefine((value, context) => {
     const valid =
@@ -89,6 +90,7 @@ export type ResearchSource = z.infer<typeof researchSourcesSchema>[number];
 
 export type ResearchAccountView = {
   id: string;
+  categoryId?: string | null;
   platform: ResearchPlatform;
   identifier: string;
   name: string;

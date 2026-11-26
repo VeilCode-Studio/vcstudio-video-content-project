@@ -9096,6 +9096,39 @@ export const socialResearchConnections = pgTable(
   (t) => [check("social_research_connection_revision", sql`${t.revision} > 0`)],
 );
 
+export const socialResearchCategories = pgTable(
+  "social_research_categories",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    workspaceId: uuid("workspace_id")
+      .notNull()
+      .references(() => workspaces.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    slot: integer("slot").notNull(),
+    version: integer("version").notNull().default(1),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("research_category_tenant_unique").on(t.id, t.workspaceId),
+    uniqueIndex("research_category_slot_unique").on(t.workspaceId, t.slot),
+    check("research_category_slot_valid", sql`${t.slot} between 1 and 50`),
+    uniqueIndex("research_category_name_unique").on(
+      t.workspaceId,
+      sql`lower(${t.name})`,
+    ),
+    check(
+      "research_category_name_valid",
+      sql`length(btrim(${t.name})) between 1 and 80 and ${t.name}=btrim(${t.name})`,
+    ),
+    check("research_category_version_positive", sql`${t.version}>0`),
+  ],
+);
+
 export const socialResearchAccounts = pgTable(
   "social_research_accounts",
   {
@@ -9107,6 +9140,7 @@ export const socialResearchAccounts = pgTable(
     identifier: text("identifier").notNull(),
     name: text("name").notNull(),
     notes: text("notes").notNull().default(""),
+    categoryId: uuid("category_id"),
     version: integer("version").notNull().default(1),
     lastRequestedAt: timestamp("last_requested_at", { withTimezone: true }),
     refreshedAt: timestamp("refreshed_at", { withTimezone: true }),
@@ -9127,6 +9161,20 @@ export const socialResearchAccounts = pgTable(
     uniqueIndex("social_research_account_tenant_unique").on(
       t.id,
       t.workspaceId,
+    ),
+    foreignKey({
+      columns: [t.categoryId, t.workspaceId],
+      foreignColumns: [
+        socialResearchCategories.id,
+        socialResearchCategories.workspaceId,
+      ],
+      name: "research_account_category_tenant_fk",
+    }),
+    index("research_account_category_index").on(
+      t.workspaceId,
+      t.categoryId,
+      t.archivedAt,
+      t.createdAt,
     ),
     uniqueIndex("social_research_account_identity_unique").on(
       t.workspaceId,

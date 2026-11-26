@@ -19,8 +19,15 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { addResearchAccountAction } from "@/app/(authenticated)/app/social/research/actions";
+import type { ResearchCategoryView } from "@studio/contracts/research-categories";
 
-export function ResearchAccountForm() {
+export function ResearchAccountForm({
+  categories = [],
+  defaultCategoryId = null,
+}: {
+  categories?: ResearchCategoryView[];
+  defaultCategoryId?: string | null;
+}) {
   const router = useRouter();
   const busy = useRef(false);
   const [pending, start] = useTransition();
@@ -55,6 +62,10 @@ export function ResearchAccountForm() {
                   identifier: data.get("identifier"),
                   name: data.get("name"),
                   notes: data.get("notes"),
+                  categoryId:
+                    data.get("categoryId") === "uncategorized"
+                      ? null
+                      : data.get("categoryId"),
                 });
                 if (!result.ok) {
                   setError(result.error);
@@ -116,6 +127,22 @@ export function ResearchAccountForm() {
                 ? "Use the Page’s numeric ID from its About / Page transparency information. Personal profiles are not supported."
                 : "Public Business and Creator accounts only. Consumer and private accounts are not supported."}
             </p>
+          </div>
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="new-account-category">Category</Label>
+            <FormSelect
+              id="new-account-category"
+              name="categoryId"
+              defaultValue={defaultCategoryId ?? "uncategorized"}
+              disabled={pending}
+            >
+              <SelectItem value="uncategorized">Uncategorized</SelectItem>
+              {categories.map((category) => (
+                <SelectItem value={category.id} key={category.id}>
+                  {category.name}
+                </SelectItem>
+              ))}
+            </FormSelect>
           </div>
           <div className="flex flex-col gap-2">
             <Label htmlFor="research-notes">

@@ -12,12 +12,24 @@ import type {
   ResearchSource,
 } from "@studio/contracts/social-research";
 
-export async function listResearchAccounts(workspaceId: string, offset = 0) {
+export async function listResearchAccounts(
+  workspaceId: string,
+  offset = 0,
+  category: string = "all",
+) {
   return getDatabase()
     .select()
     .from(accounts)
     .where(
-      and(eq(accounts.workspaceId, workspaceId), isNull(accounts.archivedAt)),
+      and(
+        eq(accounts.workspaceId, workspaceId),
+        isNull(accounts.archivedAt),
+        category === "all"
+          ? undefined
+          : category === "uncategorized"
+            ? isNull(accounts.categoryId)
+            : eq(accounts.categoryId, category),
+      ),
     )
     .orderBy(desc(accounts.createdAt), desc(accounts.id))
     .limit(21)
@@ -173,6 +185,7 @@ export async function addResearchAccount(input: {
   identifier: string;
   name: string;
   notes: string;
+  categoryId?: string | null;
 }) {
   const [row] = await getDatabase()
     .insert(accounts)
@@ -183,6 +196,7 @@ export async function addResearchAccount(input: {
         archivedAt: null,
         name: input.name,
         notes: input.notes,
+        categoryId: input.categoryId ?? null,
         version: sql`${accounts.version}+1`,
         updatedAt: new Date(),
       },

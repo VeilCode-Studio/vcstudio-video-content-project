@@ -1,5 +1,7 @@
 # Publishing connections
 
+Accounts & connections groups saved destinations by platform, including TikTok, Facebook, Instagram, YouTube, LinkedIn, X and Pinterest. Each collapsible group shows its account count and attention count; all active, expired and disconnected accounts remain available with their existing recovery and disconnect controls. Groups start expanded and use the shared responsive card grid. Grouping does not change OAuth, account identity, production-channel assignment or publication destinations.
+
 Accounts & connections at `/app/social/accounts` is the shared account-management page. Workspace owners can connect or disconnect accounts; editors can review their status and posting requirements. Every disconnect action resolves the authenticated workspace and owner capability on the server, validates the connection identifier, and scopes the lookup and update by both workspace and connection.
 
 ## Disconnect behavior

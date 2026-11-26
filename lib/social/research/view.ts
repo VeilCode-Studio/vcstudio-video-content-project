@@ -18,6 +18,7 @@ export function researchAccountView(
 ): ResearchAccountView {
   return {
     id: row.id,
+    categoryId: row.categoryId,
     platform: row.platform,
     identifier: row.identifier,
     name: row.name,

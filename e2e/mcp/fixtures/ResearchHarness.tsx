@@ -33,6 +33,20 @@ export function ResearchHarness() {
         lastError: null,
       },
     ],
+    categories: [
+      {
+        id: "66666666-6666-4666-8666-666666666666",
+        name: "Competitors",
+        version: 1,
+        accountCount: 0,
+      },
+      {
+        id: "77777777-7777-4777-8777-777777777777",
+        name: "Finance creators",
+        version: 1,
+        accountCount: 0,
+      },
+    ],
     selected: null,
     snapshots: [
       {

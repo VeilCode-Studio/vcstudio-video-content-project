@@ -1,5 +1,7 @@
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import { researchCategoryFilterSchema } from "@studio/contracts/research-categories";
+import { listResearchCategories } from "@/db/repositories/research-categories.repository";
 import { researchAuthorizationFailureSchema } from "@studio/contracts/social-research";
 import { ResearchWorkspace } from "@/components/social/research/ResearchWorkspace";
 import { getAuthenticatedWorkspaceContext } from "@/lib/auth/workspace-context";
@@ -18,6 +20,7 @@ import {
 } from "@/lib/social/research/view";
 
 const querySchema = z.object({
+  category: researchCategoryFilterSchema.catch("all").default("all"),
   account: z.uuid().optional().catch(undefined),
   observation: z.uuid().optional().catch(undefined),
   page: z.coerce.number().int().min(0).max(1000).catch(0).default(0),
@@ -41,12 +44,13 @@ export default async function SocialResearchPage({
   const enabled = isSocialResearchEnabled();
   const workspaceId = context.activeMembership.workspaceId;
   // Disabled deployments must not query the new tables or the paused Marketing subsystem.
-  const [rows, connection] = enabled
+  const [rows, connection, categories] = enabled
     ? await Promise.all([
-        listResearchAccounts(workspaceId, query.page * 20),
+        listResearchAccounts(workspaceId, query.page * 20, query.category),
         getResearchConnection(workspaceId),
+        listResearchCategories(workspaceId),
       ])
-    : [[], null];
+    : [[], null, []];
   const accounts = rows.slice(0, 20);
   const selected =
     enabled && query.account
@@ -66,6 +70,8 @@ export default async function SocialResearchPage({
       canResearch={can(context.activeMembership.role, "researchSocialAccounts")}
       connection={researchConnectionView(connection)}
       accounts={accounts.map(researchAccountView)}
+      categories={categories}
+      categoryFilter={query.category}
       selected={selected ? researchAccountView(selected) : null}
       snapshots={snapshots.slice(0, 10).map(researchSnapshotView)}
       observationId={query.observation ?? null}
