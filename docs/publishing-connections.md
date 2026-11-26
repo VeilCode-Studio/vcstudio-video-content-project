@@ -2,6 +2,8 @@
 
 Accounts & connections uses a compact shadcn Select above one responsive card grid. All platforms shows every account, ordered by platform so related accounts remain together. Selecting TikTok, Facebook, Instagram, YouTube, LinkedIn, X or Pinterest shows only that platform, with account counts, a visible result count and Reset. Filtering uses already-loaded data and makes no new request. All active, expired and disconnected accounts remain available with their existing recovery and disconnect controls. Filtering does not change OAuth, account identity, production-channel assignment or publication destinations.
 
+Released on 26 November 2026 as web commit `418142f`. Final verification passed 657 affected unit/integration tests and 14 browser journeys, including responsive Light/Dark layouts, keyboard focus, client-only filtering, result counts, Reset and disconnect confirmation. Formatting, lint (three existing warnings), TypeScript, environment validation and production build passed. Production is READY on the canonical domain; no environment change or worker deployment was required.
+
 Accounts & connections at `/app/social/accounts` is the shared account-management page. Workspace owners can connect or disconnect accounts; editors can review their status and posting requirements. Every disconnect action resolves the authenticated workspace and owner capability on the server, validates the connection identifier, and scopes the lookup and update by both workspace and connection.
 
 ## Disconnect behavior

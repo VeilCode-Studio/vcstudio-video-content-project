@@ -1,9 +1,10 @@
 # Project memory
 
-## Latest update — compact Social platform filter (26 November 2026; approved release in progress)
+## Latest update — compact Social platform filter (26 November 2026; production verified)
 
 - The owner disliked the large platform accordion implementation and explicitly approved a compact shadcn replacement and production release, in response to the pending migration/release approval. Use `WorkspaceChannelAccounts` and `WorkspaceChannelPlatformFilter`: one grid, platform Select with counts, result count and Reset; all data remains local to the loaded list. `WorkspaceChannelGroup` has been checked for remaining references and removed. Research category features from `663a947` remain included. Apply the exact prepared migration and remove only `br-green-leaf-aid4va0i`; no further approval question is needed for that already identified release.
 - Migration applied to production and temporary branch deleted; journal ID 123 records SHA-256 `37b51284a39263e1a94c5d2facf4ffbb8e428cb820d7803debda9ea6eccc9b23` at `1795654534000`. All four constraints are validated, 216 starter categories exist across 72 existing workspaces, and no account was automatically assigned. Updated filter verification passed 657 affected tests and 14 final browser journeys, including keyboard focus, no fetch on filter, Light/Dark mobile/desktop, reset and owner-only controls. Final build/release is in progress.
+- Release completed: both organization `663a947` and compact filter `418142fb030628f115cc74021a02b6bd2ef8bffc` are pushed to master. Vercel production `dpl_BFSRxs3HVSQHkW35iKRWkx2rfpRE` is READY, and canonical `vcstudio.veilcode.studio` resolves to that exact commit. Formatting, lint (three existing warnings), TypeScript, environment validation and final build passed. Seven HTTP smoke checks confirm public landing/waitlist and discovery, private-page sign-in redirects, and unauthenticated MCP challenge. Authenticated MCP remains live at 1.5.0 with six scopes and Marketing paused. No environment/worker change, provider work, publication or generation ran. Preserve only the untracked private `.claude/settings.local.json`; existing local test fix and reference assets were included as requested.
 
 ## Latest update — account organization (26 November 2026; verified locally, migration approval pending)
 
