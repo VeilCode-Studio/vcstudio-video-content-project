@@ -1,5 +1,4 @@
-import { WorkspaceChannelGroup } from "@/components/workspace/WorkspaceChannelGroup";
-import { groupConnections } from "@/lib/publishing/group-connections";
+import { WorkspaceChannelAccounts } from "@/components/workspace/WorkspaceChannelAccounts";
 import type { WorkspaceChannelView } from "@/lib/publishing/workspace-connections-view";
 
 const channels: WorkspaceChannelView[] = [
@@ -43,20 +42,16 @@ const channels: WorkspaceChannelView[] = [
 export function AccountGroupsHarness() {
   return (
     <main className="app-page">
-      {groupConnections(channels).map((group) => (
-        <WorkspaceChannelGroup
-          key={group.platform}
-          label={group.label}
-          channels={group.items}
-          canManageConnections={
-            !new URLSearchParams(location.search).has("readonly")
-          }
-          onDisconnect={async (id) => {
-            sessionStorage.setItem("account-disconnect", id);
-            return { success: true, error: null };
-          }}
-        />
-      ))}
+      <WorkspaceChannelAccounts
+        channels={channels}
+        canManageConnections={
+          !new URLSearchParams(location.search).has("readonly")
+        }
+        onDisconnect={async (id) => {
+          sessionStorage.setItem("account-disconnect", id);
+          return { success: true, error: null };
+        }}
+      />
     </main>
   );
 }

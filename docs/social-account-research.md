@@ -16,6 +16,8 @@ Use **Manage categories** to create or rename workspace-shared categories. The i
 
 Organization verification (26 November 2026): 687 affected unit/integration tests and 38 distinct browser journeys passed, including tenant/role isolation, stale revisions, database-enforced category limits, preserved observations, category confirmation/errors, responsive Light/Dark platform groups and mounted-watchlist account selection. Formatting, TypeScript, environment validation and the production build passed; lint retains three existing warnings. A production clone validated the migration and preserved exact business-record digests. Production application of this migration requires owner approval.
 
+The owner approved release on 26 November 2026. Migration `20261126005534_social_research_categories` is applied and recorded as journal entry 123; temporary clone `br-green-leaf-aid4va0i` was deleted. The Social platform presentation was subsequently refined to a compact shadcn filter and one grid; research category behavior is unchanged. No worker deployment or environment change is required.
+
 1. Open Social → Account research (`/app/social/research`).
 2. An owner separately authorizes **Meta research**. Existing publication credentials, connected destinations, project channel identities and MCP grants are not changed.
 3. An owner/editor adds a public Facebook Page by numeric Page ID or an Instagram professional account by username, with a label and learning notes. Adding an account does not fetch data.

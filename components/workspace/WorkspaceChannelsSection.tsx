@@ -12,8 +12,7 @@ import { ConnectLinkedInPageButton } from "@/components/publish/ConnectLinkedInP
 import { ConnectTikTokButton } from "@/components/publish/ConnectTikTokButton";
 import { ConnectXButton } from "@/components/publish/ConnectXButton";
 import { FutureChannelPlatformCard } from "@/components/workspace/FutureChannelPlatformCard";
-import { WorkspaceChannelGroup } from "@/components/workspace/WorkspaceChannelGroup";
-import { groupConnections } from "@/lib/publishing/group-connections";
+import { WorkspaceChannelAccounts } from "@/components/workspace/WorkspaceChannelAccounts";
 import type { WorkspaceChannelsView } from "@/lib/publishing/workspace-connections-view";
 import type { ConnectionOAuthStatus } from "@/lib/schemas/connection-oauth";
 
@@ -258,20 +257,11 @@ export function WorkspaceChannelsSection({
 
       <div>
         {initialData.channels.length > 0 ? (
-          <div
-            className="app-section"
-            aria-label="Accounts grouped by platform"
-          >
-            {groupConnections(initialData.channels).map((group) => (
-              <WorkspaceChannelGroup
-                canManageConnections={canManageConnections}
-                channels={group.items}
-                label={group.label}
-                key={group.platform}
-                onDisconnect={disconnect}
-              />
-            ))}
-          </div>
+          <WorkspaceChannelAccounts
+            canManageConnections={canManageConnections}
+            channels={initialData.channels}
+            onDisconnect={disconnect}
+          />
         ) : (
           <div className="rounded-xl border border-dashed p-6 text-center">
             <p className="text-sm font-medium">No channels connected</p>

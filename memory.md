@@ -1,5 +1,10 @@
 # Project memory
 
+## Latest update — compact Social platform filter (26 November 2026; approved release in progress)
+
+- The owner disliked the large platform accordion implementation and explicitly approved a compact shadcn replacement and production release, in response to the pending migration/release approval. Use `WorkspaceChannelAccounts` and `WorkspaceChannelPlatformFilter`: one grid, platform Select with counts, result count and Reset; all data remains local to the loaded list. `WorkspaceChannelGroup` has been checked for remaining references and removed. Research category features from `663a947` remain included. Apply the exact prepared migration and remove only `br-green-leaf-aid4va0i`; no further approval question is needed for that already identified release.
+- Migration applied to production and temporary branch deleted; journal ID 123 records SHA-256 `37b51284a39263e1a94c5d2facf4ffbb8e428cb820d7803debda9ea6eccc9b23` at `1795654534000`. All four constraints are validated, 216 starter categories exist across 72 existing workspaces, and no account was automatically assigned. Updated filter verification passed 657 affected tests and 14 final browser journeys, including keyboard focus, no fetch on filter, Light/Dark mobile/desktop, reset and owner-only controls. Final build/release is in progress.
+
 ## Latest update — account organization (26 November 2026; verified locally, migration approval pending)
 
 - Owner requested grouping connected Social destinations by platform, custom research categories, and inclusion of existing changes in production. Preserve the studio redesign `c0e1538`, local README correction and missing-expiry test fixture fix; do not stage `.claude/settings.local.json` or secrets.
