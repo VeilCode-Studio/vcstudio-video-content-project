@@ -72,7 +72,7 @@ export function ApplicationSidebar({
   const initials = getUserInitials(userDisplayName, userEmail);
 
   return (
-    <Sidebar collapsible="icon" variant="inset">
+    <Sidebar collapsible="icon" variant="sidebar">
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>

@@ -1,5 +1,9 @@
 # Project memory
 
+## Latest update — docked sidebar (26 November 2026; verification in progress)
+
+- Owner requested removal of the sidebar's surrounding margin. `ApplicationSidebar` now uses the existing shadcn `sidebar` variant instead of `inset`, removing the floating container padding and outer corner treatment through the primitive's supported API. `app/spacing.css` keeps the shell-height inset at zero at desktop as well as mobile, matching the docked layout. Content gutters and mobile Sheet behavior remain owned by existing shared primitives. No database, environment, provider or worker changes; Marketing remains paused. Verify and deploy within the existing authorized production workflow.
+
 ## Latest update — compact Social platform filter (26 November 2026; production verified)
 
 - The owner disliked the large platform accordion implementation and explicitly approved a compact shadcn replacement and production release, in response to the pending migration/release approval. Use `WorkspaceChannelAccounts` and `WorkspaceChannelPlatformFilter`: one grid, platform Select with counts, result count and Reset; all data remains local to the loaded list. `WorkspaceChannelGroup` has been checked for remaining references and removed. Research category features from `663a947` remain included. Apply the exact prepared migration and remove only `br-green-leaf-aid4va0i`; no further approval question is needed for that already identified release.
